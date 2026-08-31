@@ -1,0 +1,761 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>MobiPass — Prototype</title>
+<style>
+  :root{
+    --navy: #0B1220;
+    --navy-2: #0F1830;
+    --bg: #F4F6FA;
+    --card: #FFFFFF;
+    --border: #E7EAF0;
+    --text: #101828;
+    --muted: #667085;
+    --blue: #2F6FED;
+    --blue-soft: #EAF1FF;
+    --green: #12B76A;
+    --green-soft: #E7F9F0;
+    --purple: #7A5AF8;
+    --purple-soft: #F1ECFF;
+    --orange: #F79009;
+    --orange-soft: #FFF3E0;
+    --red: #F04438;
+    --red-soft: #FEECEB;
+  }
+  *{box-sizing:border-box;}
+  body{
+    margin:0;
+    font-family: -apple-system, "Segoe UI", Inter, Roboto, Arial, sans-serif;
+    background:var(--bg);
+    color:var(--text);
+  }
+  .app{ display:flex; min-height:100vh; }
+
+  /* ---- Sidebar (shared) ---- */
+  .sidebar{
+    width:250px; background:var(--navy); flex-shrink:0;
+    display:flex; flex-direction:column; padding:20px 14px;
+    position:sticky; top:0; height:100vh;
+  }
+  .brand{ display:flex; align-items:center; gap:10px; padding:6px 8px 20px; }
+  .brand-mark{ width:34px; height:34px; border-radius:9px;
+    background:linear-gradient(135deg,var(--blue),var(--purple));
+    display:flex; align-items:center; justify-content:center; font-weight:700; color:#fff; font-size:15px;}
+  .brand-text .name{ color:#fff; font-weight:700; font-size:16px; line-height:1.1;}
+  .brand-text .tag{ color:#7C8AAE; font-size:9.5px; letter-spacing:.03em; line-height:1.3; margin-top:2px;}
+
+  .switcher{ display:flex; background:#161F38; border-radius:10px; padding:3px; margin-bottom:18px; }
+  .switcher button{
+    flex:1; background:transparent; border:0; color:#8B96B8; font-size:12.5px; font-weight:600;
+    padding:9px 6px; border-radius:8px; cursor:pointer; font-family:inherit;
+  }
+  .switcher button.active{ background:var(--blue); color:#fff; }
+
+  .navgroup-label{ color:#5C6789; font-size:10.5px; font-weight:700; letter-spacing:.06em; padding:16px 10px 8px; }
+  .navitem{
+    display:flex; align-items:center; gap:10px; padding:9px 10px; border-radius:8px;
+    color:#B7C0DA; font-size:13.5px; cursor:default; margin-bottom:2px;
+  }
+  .navitem.active{ background:var(--blue); color:#fff; }
+  .navitem .dot{ width:16px; text-align:center; opacity:.9; }
+
+  /* ---- Main ---- */
+  .main{ flex:1; min-width:0; }
+  .topbar{
+    background:var(--navy); color:#fff; padding:16px 28px;
+    display:flex; align-items:center; justify-content:space-between;
+  }
+  .topbar h1{ font-size:17px; margin:0; font-weight:600; }
+  .topbar p{ margin:2px 0 0; font-size:12.5px; color:#8B96B8; }
+  .topbar-right{ display:flex; align-items:center; gap:16px; }
+  .avatar{
+    width:34px; height:34px; border-radius:50%; background:linear-gradient(135deg,var(--blue),var(--purple));
+    display:flex; align-items:center; justify-content:center; color:#fff; font-weight:700; font-size:13px;
+  }
+  .content{ padding:26px 28px 60px; max-width:1240px; }
+
+  /* ---- Cards / grid ---- */
+  .grid{ display:grid; gap:18px; }
+  .grid-3{ grid-template-columns:repeat(3,1fr); }
+  .grid-2{ grid-template-columns:1.3fr 1fr; }
+  .card{
+    background:var(--card); border:1px solid var(--border); border-radius:14px; padding:20px;
+  }
+  .card h3{ margin:0 0 14px; font-size:14px; font-weight:700; color:var(--text); }
+  .sub{ color:var(--muted); font-size:12.5px; }
+
+  /* ---- Voyageur: carte visuelle ---- */
+  .mcard{
+    border-radius:18px; padding:22px 24px; color:#fff; position:relative; overflow:hidden;
+    background: radial-gradient(120% 140% at 0% 0%, #2F6FED 0%, #17337A 55%, #0B1220 100%);
+    min-height:170px; display:flex; flex-direction:column; justify-content:space-between;
+  }
+  .mcard::after{
+    content:""; position:absolute; right:-40px; top:-40px; width:180px; height:180px; border-radius:50%;
+    background:rgba(255,255,255,.06);
+  }
+  .mcard-top{ display:flex; justify-content:space-between; align-items:flex-start; }
+  .mcard-id{ font-size:11px; letter-spacing:.06em; color:#C7D6FF; }
+  .mcard-name{ font-size:16px; font-weight:700; margin-top:4px; }
+  .mcard-chip{ width:38px; height:28px; border-radius:6px; background:linear-gradient(135deg,#FFD98E,#F79009); }
+  .mcard-bottom{ display:flex; justify-content:space-between; align-items:flex-end; }
+  .mcard-balance-label{ font-size:11px; color:#C7D6FF; }
+  .mcard-balance{ font-size:24px; font-weight:700; margin-top:2px; }
+  .mcard-status{ font-size:11px; background:rgba(255,255,255,.15); padding:5px 10px; border-radius:20px; }
+
+  .badge{
+    display:inline-flex; align-items:center; gap:6px; font-size:11.5px; font-weight:600;
+    padding:4px 10px; border-radius:20px;
+  }
+  .badge.ok{ background:var(--green-soft); color:var(--green); }
+  .badge.no{ background:var(--red-soft); color:var(--red); }
+  .badge.warn{ background:var(--orange-soft); color:var(--orange); }
+
+  .sub-row{ display:flex; justify-content:space-between; align-items:center; padding:12px 0; border-bottom:1px solid var(--border); }
+  .sub-row:last-child{ border-bottom:0; }
+  .sub-name{ font-weight:600; font-size:13.5px; }
+  .sub-meta{ font-size:12px; color:var(--muted); margin-top:2px; }
+  .op-mark{ width:32px; height:32px; border-radius:8px; display:flex; align-items:center; justify-content:center; font-size:11px; font-weight:800; color:#fff; }
+
+  .progress{ height:6px; background:#EEF1F6; border-radius:4px; overflow:hidden; margin-top:6px; }
+  .progress > div{ height:100%; border-radius:4px; }
+
+  .trip-row{ display:flex; align-items:center; gap:12px; padding:12px 0; border-bottom:1px solid var(--border); }
+  .trip-row:last-child{ border-bottom:0; }
+  .trip-icon{ width:36px; height:36px; border-radius:9px; display:flex; align-items:center; justify-content:center; font-size:11px; font-weight:800; color:#fff; flex-shrink:0; }
+  .trip-main{ flex:1; min-width:0; }
+  .trip-route{ font-size:13.5px; font-weight:600; }
+  .trip-time{ font-size:11.5px; color:var(--muted); margin-top:2px; }
+  .trip-amount{ font-size:13.5px; font-weight:700; text-align:right; }
+  .trip-amount .free{ color:var(--green); }
+
+  .kpi{ background:var(--card); border:1px solid var(--border); border-radius:14px; padding:18px 20px; }
+  .kpi-top{ display:flex; align-items:center; gap:10px; margin-bottom:10px; }
+  .kpi-icon{ width:38px; height:38px; border-radius:10px; display:flex; align-items:center; justify-content:center; font-size:16px; }
+  .kpi-label{ font-size:12.5px; color:var(--muted); font-weight:600; }
+  .kpi-value{ font-size:24px; font-weight:700; }
+  .kpi-delta{ font-size:11.5px; margin-top:6px; }
+  .kpi-delta.up{ color:var(--green); }
+  .kpi-delta.down{ color:var(--red); }
+
+  .btn{
+    border:0; border-radius:9px; padding:10px 16px; font-size:13px; font-weight:600; cursor:pointer; font-family:inherit;
+  }
+  .btn-primary{ background:var(--blue); color:#fff; }
+  .btn-ghost{ background:var(--blue-soft); color:var(--blue); }
+
+  .op-select{ display:flex; gap:8px; margin-bottom:20px; flex-wrap:wrap; }
+  .op-pill{
+    display:flex; align-items:center; gap:8px; padding:9px 14px; border-radius:10px; border:1.5px solid var(--border);
+    background:#fff; font-size:12.5px; font-weight:700; cursor:pointer; user-select:none;
+  }
+  .op-pill.active{ border-color:var(--blue); background:var(--blue-soft); color:var(--blue); }
+  .op-dot{ width:9px; height:9px; border-radius:50%; }
+
+  .settle-row{ display:flex; justify-content:space-between; align-items:center; padding:13px 0; border-bottom:1px solid var(--border); }
+  .settle-row:last-child{ border-bottom:0; }
+  .settle-op{ display:flex; align-items:center; gap:10px; }
+  .settle-amt{ font-weight:700; font-size:13.5px; }
+  .settle-amt.pos{ color:var(--green); }
+  .settle-amt.neg{ color:var(--red); }
+
+  .term-row{ display:flex; justify-content:space-between; align-items:center; padding:11px 0; border-bottom:1px solid var(--border); font-size:13px; }
+  .term-row:last-child{ border-bottom:0; }
+
+  .screen{ display:none; }
+  .screen.active{ display:block; }
+
+  /* ---- Mobile tab bar (hidden on desktop) ---- */
+  .mobile-tabs{ display:none; }
+
+  /* ---- Terminal ---- */
+  .term-layout{ display:grid; grid-template-columns:300px 1fr; gap:22px; align-items:start; }
+  .term-kiosk{ background:#0B1220; border-radius:22px; padding:14px; }
+  .term-result{
+    border-radius:16px; padding:34px 22px; text-align:center; color:#fff;
+    background:#12B76A; transition:background .2s ease;
+    display:flex; flex-direction:column; align-items:center;
+  }
+  .term-icon{
+    width:64px; height:64px; border-radius:50%; background:rgba(255,255,255,.2);
+    display:flex; align-items:center; justify-content:center; font-size:30px; font-weight:800; margin-bottom:16px;
+  }
+  .term-title{ font-size:18px; font-weight:700; }
+  .term-sub{ font-size:12.5px; opacity:.9; margin-top:6px; line-height:1.4; }
+  .term-divider{ width:100%; height:1px; background:rgba(255,255,255,.25); margin:20px 0 16px; }
+  .term-amount{ font-size:28px; font-weight:800; }
+  .term-amount-note{ font-size:11.5px; opacity:.85; margin-top:4px; }
+  .term-timing{ text-align:center; color:#7C8AAE; font-size:11.5px; margin-top:12px; }
+
+  .term-step{ display:flex; gap:12px; padding:12px 0; border-bottom:1px solid var(--border); }
+  .term-step:last-child{ border-bottom:0; }
+  .term-step-num{
+    width:26px; height:26px; border-radius:50%; color:#fff; font-size:12px; font-weight:700;
+    display:flex; align-items:center; justify-content:center; flex-shrink:0;
+  }
+  .term-step-label{ font-size:12px; color:var(--muted); font-weight:600; }
+  .term-step-value{ font-size:13.5px; font-weight:600; margin-top:2px; }
+
+  @media (max-width: 900px){
+    .term-layout{ grid-template-columns:1fr; }
+  }
+
+  @media (max-width: 900px){
+    .sidebar{ display:none; }
+    .mobile-tabs{
+      display:flex; position:sticky; top:0; z-index:20;
+      background:var(--navy); padding:10px 14px 12px; gap:8px;
+    }
+    .mobile-tabs button{
+      flex:1; background:#161F38; border:0; color:#8B96B8; font-size:12.5px; font-weight:700;
+      padding:10px 6px; border-radius:9px; cursor:pointer; font-family:inherit;
+    }
+    .mobile-tabs button.active{ background:var(--blue); color:#fff; }
+  }
+
+  @media (max-width: 900px){
+    .grid-3{ grid-template-columns:1fr; }
+    .grid-2{ grid-template-columns:1fr; }
+    .sidebar{ display:none; }
+  }
+</style>
+</head>
+<body>
+
+<div class="app">
+
+  <!-- SIDEBAR -->
+  <div class="sidebar">
+    <div class="brand">
+      <div class="brand-mark">M</div>
+      <div class="brand-text">
+        <div class="name">MobiPass</div>
+        <div class="tag">PLATEFORME D'INTEROPÉRABILITÉ<br>DES TRANSPORTS</div>
+      </div>
+    </div>
+
+    <div class="switcher">
+      <button id="btn-voyageur" class="active" onclick="showScreen('voyageur')">Voyageur</button>
+      <button id="btn-operateur" onclick="showScreen('operateur')">Opérateur</button>
+      <button id="btn-terminal" onclick="showScreen('terminal')">Terminal</button>
+    </div>
+
+    <div id="nav-voyageur">
+      <div class="navgroup-label">MON ESPACE</div>
+      <div class="navitem active"><span class="dot">◆</span> Ma carte</div>
+      <div class="navitem"><span class="dot">◇</span> Mes abonnements</div>
+      <div class="navitem"><span class="dot">◇</span> Historique des trajets</div>
+      <div class="navitem"><span class="dot">◇</span> Recharger le solde</div>
+      <div class="navgroup-label">RÉSEAUX</div>
+      <div class="navitem"><span class="dot">◇</span> Lignes & horaires</div>
+      <div class="navitem"><span class="dot">◇</span> Tarifs</div>
+      <div class="navgroup-label">COMPTE</div>
+      <div class="navitem"><span class="dot">◇</span> Notifications</div>
+      <div class="navitem"><span class="dot">◇</span> Paramètres</div>
+    </div>
+
+    <div id="nav-operateur" style="display:none">
+      <div class="navgroup-label">GESTION</div>
+      <div class="navitem active"><span class="dot">◆</span> Tableau de bord</div>
+      <div class="navitem"><span class="dot">◇</span> Transactions</div>
+      <div class="navitem"><span class="dot">◇</span> Terminaux</div>
+      <div class="navitem"><span class="dot">◇</span> Lignes & zones</div>
+      <div class="navgroup-label">INTEROPÉRABILITÉ</div>
+      <div class="navitem"><span class="dot">◇</span> Cartes externes acceptées</div>
+      <div class="navitem"><span class="dot">◇</span> Clearing & règlement</div>
+      <div class="navgroup-label">SYSTÈME</div>
+      <div class="navitem"><span class="dot">◇</span> Intégration API</div>
+      <div class="navitem"><span class="dot">◇</span> Support</div>
+    </div>
+
+    <div id="nav-terminal" style="display:none">
+      <div class="navgroup-label">SIMULATION</div>
+      <div class="navitem active"><span class="dot">◆</span> Borne de validation</div>
+      <div class="navitem"><span class="dot">◇</span> Journal des passages</div>
+      <div class="navgroup-label">TERMINAL</div>
+      <div class="navitem"><span class="dot">◇</span> Réseau : BRT — Station Petersen</div>
+      <div class="navitem"><span class="dot">◇</span> Diagnostic matériel</div>
+    </div>
+  </div>
+
+  <!-- MAIN -->
+  <div class="main">
+
+    <div class="mobile-tabs">
+      <button id="mbtn-voyageur" class="active" onclick="showScreen('voyageur')">Voyageur</button>
+      <button id="mbtn-operateur" onclick="showScreen('operateur')">Opérateur</button>
+      <button id="mbtn-terminal" onclick="showScreen('terminal')">Terminal</button>
+    </div>
+
+    <!-- ===================== VOYAGEUR ===================== -->
+    <div id="screen-voyageur" class="screen active">
+      <div class="topbar">
+        <div>
+          <h1>Bonsoir, Mouhamadou</h1>
+          <p>Votre espace mobilité</p>
+        </div>
+        <div class="topbar-right">
+          <div class="avatar">MD</div>
+        </div>
+      </div>
+
+      <div class="content">
+        <div class="grid grid-2" style="margin-bottom:18px;">
+          <div class="mcard">
+            <div class="mcard-top">
+              <div>
+                <div class="mcard-id">MOBILITY ID · 458 921</div>
+                <div class="mcard-name">Mouhamadou Diallo</div>
+              </div>
+              <div class="mcard-chip"></div>
+            </div>
+            <div class="mcard-bottom">
+              <div>
+                <div class="mcard-balance-label">Solde disponible</div>
+                <div class="mcard-balance">2 450 FCFA</div>
+              </div>
+              <div class="mcard-status">Carte active</div>
+            </div>
+          </div>
+
+          <div class="card" style="display:flex; flex-direction:column; justify-content:center; gap:12px;">
+            <div class="sub">Actions rapides</div>
+            <button class="btn btn-primary">Recharger le solde</button>
+            <button class="btn btn-ghost">Souscrire un abonnement</button>
+          </div>
+        </div>
+
+        <div class="grid grid-2" style="align-items:start;">
+          <div class="card">
+            <h3>Mes abonnements</h3>
+
+            <div class="sub-row">
+              <div style="display:flex; align-items:center; gap:12px;">
+                <div class="op-mark" style="background:#2F6FED;">BRT</div>
+                <div>
+                  <div class="sub-name">Abonnement mensuel — Toutes zones</div>
+                  <div class="sub-meta">Valide jusqu'au 30 sept. 2026</div>
+                </div>
+              </div>
+              <span class="badge ok">Actif</span>
+            </div>
+
+            <div class="sub-row">
+              <div style="display:flex; align-items:center; gap:12px;">
+                <div class="op-mark" style="background:#F04438;">TER</div>
+                <div>
+                  <div class="sub-name">Pass 20 trajets</div>
+                  <div class="sub-meta">14 trajets restants</div>
+                  <div class="progress"><div style="width:70%; background:#F04438;"></div></div>
+                </div>
+              </div>
+              <span class="badge ok">Actif</span>
+            </div>
+
+            <div class="sub-row">
+              <div style="display:flex; align-items:center; gap:12px;">
+                <div class="op-mark" style="background:#12B76A;">DDD</div>
+                <div>
+                  <div class="sub-name">Aucun abonnement</div>
+                  <div class="sub-meta">Tarif normal appliqué au trajet</div>
+                </div>
+              </div>
+              <span class="badge no">Non inclus</span>
+            </div>
+
+            <div class="sub-row">
+              <div style="display:flex; align-items:center; gap:12px;">
+                <div class="op-mark" style="background:#F79009;">AFTU</div>
+                <div>
+                  <div class="sub-name">Aucun abonnement</div>
+                  <div class="sub-meta">Tarif normal appliqué au trajet</div>
+                </div>
+              </div>
+              <span class="badge no">Non inclus</span>
+            </div>
+          </div>
+
+          <div class="card">
+            <h3>Historique des trajets</h3>
+
+            <div class="trip-row">
+              <div class="trip-icon" style="background:#2F6FED;">BRT</div>
+              <div class="trip-main">
+                <div class="trip-route">Liberté → Guédiawaye</div>
+                <div class="trip-time">Aujourd'hui, 10:24</div>
+              </div>
+              <div class="trip-amount"><span class="free">Inclus</span></div>
+            </div>
+
+            <div class="trip-row">
+              <div class="trip-icon" style="background:#F04438;">TER</div>
+              <div class="trip-main">
+                <div class="trip-route">Dakar → Diamniadio</div>
+                <div class="trip-time">Hier, 18:41</div>
+              </div>
+              <div class="trip-amount">1 trajet déduit</div>
+            </div>
+
+            <div class="trip-row">
+              <div class="trip-icon" style="background:#12B76A;">DDD</div>
+              <div class="trip-main">
+                <div class="trip-route">Pikine → Rufisque</div>
+                <div class="trip-time">Hier, 09:12</div>
+              </div>
+              <div class="trip-amount">300 FCFA</div>
+            </div>
+
+            <div class="trip-row">
+              <div class="trip-icon" style="background:#F79009;">AFTU</div>
+              <div class="trip-main">
+                <div class="trip-route">Ligne 52 : Parcelles → Thiaroye</div>
+                <div class="trip-time">27 août, 07:55</div>
+              </div>
+              <div class="trip-amount">200 FCFA</div>
+            </div>
+
+            <div style="margin-top:12px;">
+              <span class="sub" style="color:var(--blue); font-weight:600; cursor:default;">Voir tout l'historique</span>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ===================== OPÉRATEUR ===================== -->
+    <div id="screen-operateur" class="screen">
+      <div class="topbar">
+        <div>
+          <h1 id="op-title">Espace opérateur</h1>
+          <p id="op-subtitle">Vue de votre réseau sur la plateforme MobiPass</p>
+        </div>
+        <div class="topbar-right">
+          <div id="op-avatar" class="avatar" style="background:linear-gradient(135deg,#2F6FED,#17337A);">BR</div>
+        </div>
+      </div>
+
+      <div class="content">
+        <div class="op-select">
+          <div class="op-pill active" data-op="brt" onclick="selectOperator('brt')"><span class="op-dot" style="background:#2F6FED;"></span> BRT Dakar</div>
+          <div class="op-pill" data-op="ter" onclick="selectOperator('ter')"><span class="op-dot" style="background:#F04438;"></span> TER Sénégal</div>
+          <div class="op-pill" data-op="ddd" onclick="selectOperator('ddd')"><span class="op-dot" style="background:#12B76A;"></span> Dakar Dem Dikk</div>
+          <div class="op-pill" data-op="aftu" onclick="selectOperator('aftu')"><span class="op-dot" style="background:#F79009;"></span> AFTU</div>
+        </div>
+
+        <div class="grid grid-3" style="margin-bottom:18px;">
+          <div class="kpi">
+            <div class="kpi-top">
+              <div class="kpi-icon" style="background:var(--blue-soft); color:var(--blue);">✓</div>
+              <div class="kpi-label">Validations aujourd'hui</div>
+            </div>
+            <div id="kpi1-value" class="kpi-value">38 210</div>
+            <div id="kpi1-delta" class="kpi-delta up">+ 6,2% vs hier</div>
+          </div>
+          <div class="kpi">
+            <div class="kpi-top">
+              <div class="kpi-icon" style="background:var(--purple-soft); color:var(--purple);">⇄</div>
+              <div class="kpi-label">Cartes externes acceptées</div>
+            </div>
+            <div id="kpi2-value" class="kpi-value">4 512</div>
+            <div id="kpi2-delta" class="kpi-delta up">11,8% du trafic total</div>
+          </div>
+          <div class="kpi">
+            <div class="kpi-top">
+              <div class="kpi-icon" style="background:var(--green-soft); color:var(--green);">₣</div>
+              <div class="kpi-label">Recettes du jour</div>
+            </div>
+            <div id="kpi3-value" class="kpi-value">18 460 000</div>
+            <div id="kpi3-delta" class="kpi-delta up">+ 3,4% vs hier</div>
+          </div>
+        </div>
+
+        <div class="grid grid-2" style="align-items:start;">
+          <div class="card">
+            <h3>Clearing & règlement inter-opérateurs</h3>
+            <p class="sub" style="margin-top:-8px; margin-bottom:14px;">Montants dus pour les trajets effectués par des voyageurs d'autres réseaux sur le vôtre, et inversement — période en cours.</p>
+
+            <div id="clearing-rows"></div>
+
+            <div class="settle-row">
+              <div style="font-weight:700; font-size:13.5px;">Solde net à recevoir</div>
+              <div id="clearing-net" class="settle-amt pos" style="font-size:15px;">+ 955 000 FCFA</div>
+            </div>
+
+            <button class="btn btn-ghost" style="margin-top:14px; width:100%;">Voir le rapport de compensation</button>
+          </div>
+
+          <div class="card">
+            <h3 id="terminals-title">État des terminaux BRT</h3>
+            <div id="terminals-rows"></div>
+
+            <div style="margin-top:14px;">
+              <span class="sub" style="color:var(--blue); font-weight:600; cursor:default;">Gérer tous les terminaux</span>
+            </div>
+          </div>
+        </div>
+
+        <div class="card" style="margin-top:18px;">
+          <h3 id="validations-title">Dernières validations sur le réseau BRT</h3>
+          <div id="validations-rows"></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ===================== TERMINAL ===================== -->
+    <div id="screen-terminal" class="screen">
+      <div class="topbar">
+        <div>
+          <h1>Borne de validation — Station Petersen</h1>
+          <p>Réseau BRT · Simulation du parcours de décision</p>
+        </div>
+        <div class="topbar-right">
+          <span class="badge ok">Terminal en ligne</span>
+        </div>
+      </div>
+
+      <div class="content">
+        <div class="term-layout">
+
+          <!-- Kiosk mockup -->
+          <div class="term-kiosk">
+            <div id="term-result" class="term-result">
+              <div id="term-icon" class="term-icon">✓</div>
+              <div id="term-title" class="term-title">Accès autorisé</div>
+              <div id="term-sub" class="term-sub">Trajet inclus dans l'abonnement</div>
+              <div class="term-divider"></div>
+              <div id="term-amount" class="term-amount">0 FCFA</div>
+              <div id="term-amount-note" class="term-amount-note">Inclus dans l'abonnement</div>
+            </div>
+            <div id="term-time" class="term-timing">Décision rendue en 0,8 s</div>
+          </div>
+
+          <!-- Steps + controls -->
+          <div>
+            <div class="card" style="margin-bottom:16px;">
+              <h3>Parcours de décision</h3>
+              <div id="term-steps"></div>
+            </div>
+
+            <div class="card">
+              <h3>Simuler un passage</h3>
+              <p class="sub" style="margin-top:-8px; margin-bottom:14px;">Testez les trois cas types définis dans le moteur de droits.</p>
+              <div style="display:flex; flex-direction:column; gap:10px;">
+                <button class="btn btn-primary" onclick="runScenario('included')">Carte BRT avec abonnement actif</button>
+                <button class="btn btn-ghost" onclick="runScenario('external')">Carte TER sans abonnement BRT (tarif externe)</button>
+                <button class="btn" style="background:var(--red-soft); color:var(--red);" onclick="runScenario('denied')">Carte DDD, solde insuffisant</button>
+              </div>
+            </div>
+          </div>
+
+        </div>
+      </div>
+    </div>
+
+  </div>
+</div>
+
+<script>
+  function showScreen(name){
+    ['voyageur','operateur','terminal'].forEach(function(s){
+      document.getElementById('screen-'+s).classList.toggle('active', name===s);
+      document.getElementById('nav-'+s).style.display = name===s ? 'block' : 'none';
+      document.getElementById('btn-'+s).classList.toggle('active', name===s);
+      document.getElementById('mbtn-'+s).classList.toggle('active', name===s);
+    });
+  }
+
+  var scenarios = {
+    included: {
+      icon: '✓', iconBg: '#12B76A', title: 'Accès autorisé', sub: 'Trajet inclus dans l’abonnement',
+      steps: [
+        {label:'Identification', value:'Carte BRT **** 4587 → Mobility ID 458 921', state:'done'},
+        {label:'Vérification des droits', value:'Abonnement BRT mensuel — actif', state:'done'},
+        {label:'Tarification', value:'Trajet couvert par l’abonnement', state:'done'},
+        {label:'Décision', value:'0 FCFA — passage autorisé', state:'ok'}
+      ],
+      amount:'0 FCFA', amountNote:'Inclus dans l’abonnement', time:'0,8 s'
+    },
+    external: {
+      icon: '✓', iconBg: '#2F6FED', title: 'Accès autorisé', sub: 'Carte d’un autre opérateur — tarif externe appliqué',
+      steps: [
+        {label:'Identification', value:'Carte TER **** 6621 → Mobility ID 512 034', state:'done'},
+        {label:'Vérification des droits', value:'Aucun abonnement BRT associé', state:'warn'},
+        {label:'Tarification', value:'Tarif normal BRT : 400 FCFA', state:'done'},
+        {label:'Décision', value:'400 FCFA débités du solde', state:'ok'}
+      ],
+      amount:'400 FCFA', amountNote:'Débité du solde de la carte', time:'0,9 s'
+    },
+    denied: {
+      icon: '✕', iconBg: '#F04438', title: 'Accès refusé', sub: 'Solde insuffisant et aucun abonnement valide',
+      steps: [
+        {label:'Identification', value:'Carte DDD **** 9080 → Mobility ID 390 117', state:'done'},
+        {label:'Vérification des droits', value:'Aucun abonnement BRT associé', state:'warn'},
+        {label:'Tarification', value:'Tarif normal BRT : 400 FCFA', state:'done'},
+        {label:'Décision', value:'Solde disponible : 150 FCFA — insuffisant', state:'no'}
+      ],
+      amount:'—', amountNote:'Veuillez recharger votre carte', time:'0,7 s'
+    }
+  };
+
+  function runScenario(key){
+    var s = scenarios[key];
+    var panel = document.getElementById('term-result');
+    panel.style.background = s.iconBg;
+    document.getElementById('term-icon').textContent = s.icon;
+    document.getElementById('term-icon').style.background = 'rgba(255,255,255,.2)';
+    document.getElementById('term-title').textContent = s.title;
+    document.getElementById('term-sub').textContent = s.sub;
+    document.getElementById('term-amount').textContent = s.amount;
+    document.getElementById('term-amount-note').textContent = s.amountNote;
+    document.getElementById('term-time').textContent = 'Décision rendue en ' + s.time;
+
+    var stepsHtml = '';
+    s.steps.forEach(function(st, i){
+      var color = st.state==='ok' ? '#12B76A' : st.state==='no' ? '#F04438' : st.state==='warn' ? '#F79009' : '#2F6FED';
+      stepsHtml += '<div class="term-step">' +
+        '<div class="term-step-num" style="background:'+color+'">'+(i+1)+'</div>' +
+        '<div><div class="term-step-label">'+st.label+'</div><div class="term-step-value">'+st.value+'</div></div>' +
+        '</div>';
+    });
+    document.getElementById('term-steps').innerHTML = stepsHtml;
+  }
+
+  var COLORS = { brt:'#2F6FED', ter:'#F04438', ddd:'#12B76A', aftu:'#F79009' };
+  var NAMES = { brt:'BRT Dakar', ter:'TER Sénégal', ddd:'Dakar Dem Dikk', aftu:'AFTU' };
+
+  var operatorData = {
+    brt: {
+      initials:'BR', subtitle:'Réseau BRT Dakar',
+      kpi1:'38 210', kpi1d:'+ 6,2% vs hier', kpi2:'4 512', kpi2d:'11,8% du trafic total',
+      kpi3:'18 460 000', kpi3d:'+ 3,4% vs hier',
+      clearing:[ {op:'ter', amt:1240000}, {op:'ddd', amt:-380000}, {op:'aftu', amt:95000} ],
+      terminals:[
+        {name:'Station Petersen', status:'ok'}, {name:'Station Liberté 5', status:'ok'},
+        {name:'Station Guédiawaye', status:'ok'}, {name:'Station Pikine', status:'warn'},
+        {name:'Station Grand Yoff', status:'no'}
+      ],
+      validations:[
+        {op:'ter', route:'Carte TER **** 6621 · Station Petersen → Guédiawaye', time:'Il y a 2 min · Tarif externe appliqué', amount:'400 FCFA'},
+        {op:'brt', route:'Carte BRT **** 4587 · Liberté → Guédiawaye', time:'Il y a 4 min · Abonnement mensuel', amount:'Inclus', free:true},
+        {op:'aftu', route:'Carte AFTU **** 3321 · Station Petersen → Gare', time:'Il y a 6 min · Tarif externe appliqué', amount:'400 FCFA'}
+      ]
+    },
+    ter: {
+      initials:'TR', subtitle:'Réseau TER Sénégal',
+      kpi1:'22 940', kpi1d:'+ 4,1% vs hier', kpi2:'3 180', kpi2d:'13,9% du trafic total',
+      kpi3:'24 120 000', kpi3d:'+ 5,0% vs hier',
+      clearing:[ {op:'brt', amt:-1240000}, {op:'ddd', amt:210000}, {op:'aftu', amt:-60000} ],
+      terminals:[
+        {name:'Gare Dakar', status:'ok'}, {name:'Gare Diamniadio', status:'ok'},
+        {name:'Gare Rufisque', status:'ok'}, {name:'Gare Sébikotane', status:'warn'},
+        {name:'Gare AIBD', status:'ok'}
+      ],
+      validations:[
+        {op:'brt', route:'Carte BRT **** 7042 · Dakar → Diamniadio', time:'Il y a 3 min · Tarif externe appliqué', amount:'800 FCFA'},
+        {op:'ter', route:'Carte TER **** 6621 · Dakar → Rufisque', time:'Il y a 5 min · Pass 20 trajets', amount:'1 trajet déduit'},
+        {op:'ddd', route:'Carte DDD **** 5510 · Diamniadio → AIBD', time:'Il y a 9 min · Tarif externe appliqué', amount:'800 FCFA'}
+      ]
+    },
+    ddd: {
+      initials:'DD', subtitle:'Réseau Dakar Dem Dikk',
+      kpi1:'15 300', kpi1d:'+ 2,7% vs hier', kpi2:'2 050', kpi2d:'13,4% du trafic total',
+      kpi3:'6 850 000', kpi3d:'+ 1,9% vs hier',
+      clearing:[ {op:'brt', amt:380000}, {op:'ter', amt:-210000}, {op:'aftu', amt:45000} ],
+      terminals:[
+        {name:'Gare routière Pompiers', status:'ok'}, {name:'Terminus Pikine', status:'ok'},
+        {name:'Terminus Rufisque', status:'warn'}, {name:'Terminus Ouakam', status:'ok'},
+        {name:'Terminus Parcelles', status:'ok'}
+      ],
+      validations:[
+        {op:'brt', route:'Carte BRT **** 2298 · Pikine → Rufisque', time:'Il y a 1 min · Tarif externe appliqué', amount:'300 FCFA'},
+        {op:'ddd', route:'Carte DDD **** 5510 · Ouakam → Petersen', time:'Il y a 4 min · Abonnement mensuel', amount:'Inclus', free:true},
+        {op:'aftu', route:'Carte AFTU **** 8712 · Parcelles → Thiaroye', time:'Il y a 7 min · Tarif externe appliqué', amount:'300 FCFA'}
+      ]
+    },
+    aftu: {
+      initials:'AF', subtitle:'Réseau AFTU',
+      kpi1:'9 870', kpi1d:'+ 1,5% vs hier', kpi2:'1 140', kpi2d:'11,6% du trafic total',
+      kpi3:'2 340 000', kpi3d:'+ 2,2% vs hier',
+      clearing:[ {op:'brt', amt:-95000}, {op:'ter', amt:60000}, {op:'ddd', amt:-45000} ],
+      terminals:[
+        {name:'Ligne 12 — Terminus', status:'ok'}, {name:'Ligne 52 — Thiaroye', status:'ok'},
+        {name:'Ligne 52 — Parcelles', status:'warn'}, {name:'Ligne 8 — Petersen', status:'ok'},
+        {name:'Ligne 8 — Grand Yoff', status:'no'}
+      ],
+      validations:[
+        {op:'ddd', route:'Carte DDD **** 5510 · Ligne 52 : Parcelles → Thiaroye', time:'Il y a 2 min · Tarif externe appliqué', amount:'200 FCFA'},
+        {op:'aftu', route:'Carte AFTU **** 3321 · Ligne 12 : Petersen → Gare', time:'Il y a 5 min · Trajet payé', amount:'200 FCFA'},
+        {op:'ter', route:'Carte TER **** 6621 · Ligne 8 : Grand Yoff → Petersen', time:'Il y a 8 min · Tarif externe appliqué', amount:'200 FCFA'}
+      ]
+    }
+  };
+
+  function badgeClass(status){ return status==='ok' ? 'ok' : status==='warn' ? 'warn' : 'no'; }
+  function badgeLabel(status){ return status==='ok' ? 'En ligne' : status==='warn' ? 'Sync lente' : 'Hors ligne'; }
+  function fmt(n){ return Math.abs(n).toLocaleString('fr-FR'); }
+
+  function selectOperator(key){
+    var d = operatorData[key];
+    var color = COLORS[key];
+
+    document.querySelectorAll('.op-pill').forEach(function(p){
+      p.classList.toggle('active', p.getAttribute('data-op')===key);
+    });
+
+    document.getElementById('op-title').textContent = NAMES[key];
+    document.getElementById('op-subtitle').textContent = d.subtitle + ' · Vue opérateur sur la plateforme MobiPass';
+    var avatar = document.getElementById('op-avatar');
+    avatar.textContent = d.initials;
+    avatar.style.background = 'linear-gradient(135deg,' + color + ',#0B1220)';
+
+    document.getElementById('kpi1-value').textContent = d.kpi1;
+    document.getElementById('kpi1-delta').textContent = d.kpi1d;
+    document.getElementById('kpi2-value').textContent = d.kpi2;
+    document.getElementById('kpi2-delta').textContent = d.kpi2d;
+    document.getElementById('kpi3-value').textContent = d.kpi3;
+    document.getElementById('kpi3-delta').textContent = d.kpi3d;
+
+    var clearingHtml = '';
+    var net = 0;
+    d.clearing.forEach(function(row){
+      net += row.amt;
+      var sign = row.amt >= 0 ? 'pos' : 'neg';
+      var symbol = row.amt >= 0 ? '+ ' : '− ';
+      clearingHtml += '<div class="settle-row">' +
+        '<div class="settle-op"><span class="op-dot" style="background:'+COLORS[row.op]+';"></span> '+NAMES[row.op]+'</div>' +
+        '<div class="settle-amt '+sign+'">'+symbol+fmt(row.amt)+' FCFA</div>' +
+        '</div>';
+    });
+    document.getElementById('clearing-rows').innerHTML = clearingHtml;
+    var netEl = document.getElementById('clearing-net');
+    netEl.className = 'settle-amt ' + (net>=0 ? 'pos' : 'neg');
+    netEl.textContent = (net>=0 ? '+ ' : '− ') + fmt(net) + ' FCFA';
+
+    document.getElementById('terminals-title').textContent = 'État des terminaux ' + NAMES[key];
+    var termHtml = '';
+    d.terminals.forEach(function(t){
+      termHtml += '<div class="term-row"><span>'+t.name+'</span> <span class="badge '+badgeClass(t.status)+'">'+badgeLabel(t.status)+'</span></div>';
+    });
+    document.getElementById('terminals-rows').innerHTML = termHtml;
+
+    document.getElementById('validations-title').textContent = 'Dernières validations sur le réseau ' + NAMES[key];
+    var valHtml = '';
+    d.validations.forEach(function(v){
+      var amtHtml = v.free ? '<span class="free">'+v.amount+'</span>' : v.amount;
+      valHtml += '<div class="trip-row">' +
+        '<div class="trip-icon" style="background:'+COLORS[v.op]+';">'+v.op.toUpperCase()+'</div>' +
+        '<div class="trip-main"><div class="trip-route">'+v.route+'</div><div class="trip-time">'+v.time+'</div></div>' +
+        '<div class="trip-amount">'+amtHtml+'</div>' +
+        '</div>';
+    });
+    document.getElementById('validations-rows').innerHTML = valHtml;
+  }
+
+  selectOperator('brt');
+  runScenario('included');
+</script>
+
+</body>
+</html>
