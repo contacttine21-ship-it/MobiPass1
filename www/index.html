@@ -1,4 +1,3 @@
-
 <!DOCTYPE html>
 <html lang="fr">
 <head>
@@ -74,6 +73,10 @@
   .avatar{
     width:34px; height:34px; border-radius:50%; background:linear-gradient(135deg,var(--blue),var(--purple));
     display:flex; align-items:center; justify-content:center; color:#fff; font-weight:700; font-size:13px;
+  }
+  .back-btn{
+    background:rgba(255,255,255,.1); border:0; color:#fff; width:32px; height:32px; border-radius:8px;
+    font-size:15px; cursor:pointer; flex-shrink:0;
   }
   .content{ padding:26px 28px 60px; max-width:1240px; }
 
@@ -259,6 +262,7 @@
       padding:10px 6px; border-radius:9px; cursor:pointer; font-family:inherit;
     }
     .mobile-tabs button.active{ background:var(--blue); color:#fff; }
+    .mobile-tabs .drawer-btn{ flex:0 0 auto; width:40px; font-size:16px; }
   }
 
   @media (max-width: 900px){
@@ -266,6 +270,47 @@
     .grid-2{ grid-template-columns:1fr; }
     .sidebar{ display:none; }
   }
+
+  /* ---- Mobile drawer (secondary nav) ---- */
+  .drawer-overlay{
+    position:fixed; inset:0; background:rgba(11,18,32,.55); z-index:150;
+    display:none;
+  }
+  .drawer-overlay.open{ display:block; }
+  .drawer-panel{
+    position:absolute; top:0; left:0; bottom:0; width:78%; max-width:300px;
+    background:var(--navy); padding:20px 14px; overflow-y:auto;
+    animation:slideRight .18s ease;
+  }
+  @keyframes slideRight{ from{ transform:translateX(-16px); opacity:0; } to{ transform:translateX(0); opacity:1; } }
+  .drawer-close{
+    background:#161F38; border:0; color:#B7C0DA; width:32px; height:32px; border-radius:8px;
+    font-size:15px; cursor:pointer; margin-bottom:16px;
+  }
+
+  /* ---- Auth (inscription) ---- */
+  .auth-overlay{
+    position:fixed; inset:0; background:var(--navy); z-index:300;
+    display:flex; align-items:center; justify-content:center; padding:24px;
+  }
+  .auth-overlay.hidden{ display:none; }
+  .auth-card{ width:100%; max-width:380px; }
+  .auth-logo{ display:flex; flex-direction:column; align-items:center; gap:10px; margin-bottom:28px; }
+  .auth-logo .brand-mark{ width:52px; height:52px; font-size:22px; border-radius:14px; }
+  .auth-logo .name{ color:#fff; font-weight:700; font-size:20px; }
+  .auth-logo .tag{ color:#7C8AAE; font-size:11px; letter-spacing:.04em; }
+  .auth-title{ color:#fff; font-size:18px; font-weight:700; margin-bottom:4px; }
+  .auth-sub{ color:#8B96B8; font-size:12.5px; margin-bottom:22px; }
+  .auth-field-label{ color:#B7C0DA; font-size:12px; font-weight:600; margin:14px 0 6px; }
+  .auth-input{
+    width:100%; border:1.5px solid #263257; background:#111A32; color:#fff;
+    border-radius:10px; padding:12px 14px; font-size:14px; font-family:inherit;
+  }
+  .auth-input::placeholder{ color:#5C6789; }
+  .auth-input:disabled{ opacity:.5; }
+  .auth-input-soon{ font-size:10.5px; color:#F79009; margin-top:5px; }
+  .auth-error{ color:#F97066; font-size:12px; margin-top:12px; min-height:16px; }
+  .auth-footer{ text-align:center; color:#5C6789; font-size:11.5px; margin-top:18px; }
 </style>
 </head>
 <body>
@@ -290,16 +335,16 @@
 
     <div id="nav-voyageur">
       <div class="navgroup-label">MON ESPACE</div>
-      <div class="navitem active"><span class="dot">◆</span> Ma carte</div>
-      <div class="navitem"><span class="dot">◇</span> Mes abonnements</div>
-      <div class="navitem"><span class="dot">◇</span> Historique des trajets</div>
-      <div class="navitem"><span class="dot">◇</span> Recharger le solde</div>
+      <div class="navitem active" onclick="showScreen('voyageur')"><span class="dot">◆</span> Ma carte</div>
+      <div class="navitem" onclick="showScreen('voyageur')"><span class="dot">◇</span> Mes abonnements</div>
+      <div class="navitem" onclick="showScreen('voyageur')"><span class="dot">◇</span> Historique des trajets</div>
+      <div class="navitem" onclick="openModal('recharge')"><span class="dot">◇</span> Recharger le solde</div>
       <div class="navgroup-label">RÉSEAUX</div>
-      <div class="navitem"><span class="dot">◇</span> Lignes & horaires</div>
-      <div class="navitem"><span class="dot">◇</span> Tarifs</div>
+      <div class="navitem" onclick="showScreen('lignes')"><span class="dot">◇</span> Lignes & horaires</div>
+      <div class="navitem" onclick="showToast('Tarifs — bientôt disponible')"><span class="dot">◇</span> Tarifs</div>
       <div class="navgroup-label">COMPTE</div>
-      <div class="navitem"><span class="dot">◇</span> Notifications</div>
-      <div class="navitem"><span class="dot">◇</span> Paramètres</div>
+      <div class="navitem" onclick="showScreen('notifications')"><span class="dot">◇</span> Notifications</div>
+      <div class="navitem" onclick="showScreen('parametres')"><span class="dot">◇</span> Paramètres</div>
     </div>
 
     <div id="nav-operateur" style="display:none">
@@ -326,10 +371,33 @@
     </div>
   </div>
 
+  <!-- MOBILE DRAWER -->
+  <div id="drawer-overlay" class="drawer-overlay" onclick="if(event.target===this) closeDrawer()">
+    <div class="drawer-panel">
+      <button class="drawer-close" onclick="closeDrawer()">✕</button>
+      <div class="brand" style="padding-bottom:14px;">
+        <div class="brand-mark">M</div>
+        <div class="brand-text">
+          <div class="name">MobiPass</div>
+          <div class="tag">MON ESPACE</div>
+        </div>
+      </div>
+      <div class="navitem active" onclick="closeDrawer(); showScreen('voyageur')"><span class="dot">◆</span> Ma carte</div>
+      <div class="navitem" onclick="closeDrawer(); openModal('recharge')"><span class="dot">◇</span> Recharger le solde</div>
+      <div class="navitem" onclick="closeDrawer(); openModal('subscribe')"><span class="dot">◇</span> Souscrire un abonnement</div>
+      <div class="navgroup-label">RÉSEAUX</div>
+      <div class="navitem" onclick="closeDrawer(); showScreen('lignes')"><span class="dot">◇</span> Lignes & horaires</div>
+      <div class="navgroup-label">COMPTE</div>
+      <div class="navitem" onclick="closeDrawer(); showScreen('notifications')"><span class="dot">◇</span> Notifications</div>
+      <div class="navitem" onclick="closeDrawer(); showScreen('parametres')"><span class="dot">◇</span> Paramètres</div>
+    </div>
+  </div>
+
   <!-- MAIN -->
   <div class="main">
 
     <div class="mobile-tabs">
+      <button class="drawer-btn" onclick="openDrawer()">☰</button>
       <button id="mbtn-voyageur" class="active" onclick="showScreen('voyageur')">Voyageur</button>
       <button id="mbtn-operateur" onclick="showScreen('operateur')">Opérateur</button>
       <button id="mbtn-terminal" onclick="showScreen('terminal')">Terminal</button>
@@ -339,11 +407,11 @@
     <div id="screen-voyageur" class="screen active">
       <div class="topbar">
         <div>
-          <h1>Bonsoir, Mouhamadou</h1>
+          <h1 id="voyageur-title">Bonsoir, Mouhamadou</h1>
           <p>Votre espace mobilité</p>
         </div>
         <div class="topbar-right">
-          <div class="avatar">MD</div>
+          <div id="voyageur-avatar" class="avatar">MD</div>
         </div>
       </div>
 
@@ -353,7 +421,7 @@
             <div class="mcard-top">
               <div>
                 <div class="mcard-id">MOBILITY ID · 458 921</div>
-                <div class="mcard-name">Mouhamadou Diallo</div>
+                <div id="mcard-name" class="mcard-name">Mouhamadou Diallo</div>
               </div>
               <div class="mcard-chip"></div>
             </div>
@@ -520,6 +588,104 @@
       </div>
     </div>
 
+    <!-- ===================== NOTIFICATIONS ===================== -->
+    <div id="screen-notifications" class="screen">
+      <div class="topbar">
+        <div style="display:flex; align-items:center; gap:12px;">
+          <button class="back-btn" onclick="showScreen('voyageur')">←</button>
+          <div>
+            <h1>Notifications</h1>
+            <p>Alertes liées à votre compte et vos trajets</p>
+          </div>
+        </div>
+      </div>
+      <div class="content">
+        <div class="card">
+          <div id="notifications-list"></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ===================== PARAMÈTRES ===================== -->
+    <div id="screen-parametres" class="screen">
+      <div class="topbar">
+        <div style="display:flex; align-items:center; gap:12px;">
+          <button class="back-btn" onclick="showScreen('voyageur')">←</button>
+          <div>
+            <h1>Paramètres</h1>
+            <p>Votre profil et vos préférences</p>
+          </div>
+        </div>
+      </div>
+      <div class="content">
+        <div class="grid grid-2" style="align-items:start;">
+          <div class="card">
+            <h3>Profil</h3>
+            <div class="field-label" style="margin-top:0;">Prénom</div>
+            <input id="profile-firstname" class="field-input" disabled>
+            <div class="field-label">Nom</div>
+            <input id="profile-lastname" class="field-input" disabled>
+            <div class="field-label">Email</div>
+            <input id="profile-email" class="field-input" disabled>
+            <div class="field-label">Numéro de téléphone</div>
+            <input class="field-input" placeholder="Bientôt disponible" disabled>
+            <button class="btn btn-ghost" style="width:100%; margin-top:16px;" onclick="showToast('Modification du profil — bientôt disponible')">Modifier mes informations</button>
+          </div>
+
+          <div class="card">
+            <h3>Préférences</h3>
+            <div class="settle-row">
+              <div>
+                <div class="sub-name">Notifications push</div>
+                <div class="sub-meta">Recevoir une alerte à chaque trajet</div>
+              </div>
+              <span class="badge ok">Activé</span>
+            </div>
+            <div class="settle-row">
+              <div>
+                <div class="sub-name">Langue</div>
+                <div class="sub-meta">Français</div>
+              </div>
+              <span class="sub" style="color:var(--blue); font-weight:600; cursor:pointer;" onclick="showToast('Autres langues — bientôt disponible')">Changer</span>
+            </div>
+            <div class="settle-row">
+              <div>
+                <div class="sub-name">Sécurité de la carte</div>
+                <div class="sub-meta">Verrouillage biométrique</div>
+              </div>
+              <span class="badge ok">Activé</span>
+            </div>
+            <button class="btn" style="width:100%; margin-top:16px; background:var(--red-soft); color:var(--red);" onclick="showToast('Déconnexion — bientôt disponible')">Se déconnecter</button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ===================== LIGNES & HORAIRES ===================== -->
+    <div id="screen-lignes" class="screen">
+      <div class="topbar">
+        <div style="display:flex; align-items:center; gap:12px;">
+          <button class="back-btn" onclick="showScreen('voyageur')">←</button>
+          <div>
+            <h1>Lignes & horaires</h1>
+            <p>Consultez les lignes disponibles par réseau</p>
+          </div>
+        </div>
+      </div>
+      <div class="content">
+        <div class="op-select">
+          <div class="op-pill active" data-lop="brt" onclick="selectLignesOp('brt')"><span class="op-dot" style="background:#2F6FED;"></span> BRT Dakar</div>
+          <div class="op-pill" data-lop="ter" onclick="selectLignesOp('ter')"><span class="op-dot" style="background:#F04438;"></span> TER Sénégal</div>
+          <div class="op-pill" data-lop="ddd" onclick="selectLignesOp('ddd')"><span class="op-dot" style="background:#12B76A;"></span> Dakar Dem Dikk</div>
+          <div class="op-pill" data-lop="aftu" onclick="selectLignesOp('aftu')"><span class="op-dot" style="background:#F79009;"></span> AFTU</div>
+        </div>
+        <div class="card">
+          <h3 id="lignes-title">Lignes BRT Dakar</h3>
+          <div id="lignes-list"></div>
+        </div>
+      </div>
+    </div>
+
   </div>
 </div>
 
@@ -532,14 +698,56 @@
 
 <div id="toast" class="toast"></div>
 
+<!-- ===================== INSCRIPTION ===================== -->
+<div id="auth-overlay" class="auth-overlay">
+  <div class="auth-card">
+    <div class="auth-logo">
+      <div class="brand-mark">M</div>
+      <div class="name">MobiPass</div>
+      <div class="tag">UNE CARTE · UN COMPTE · TOUS LES TRANSPORTS</div>
+    </div>
+
+    <div class="auth-title">Créer votre compte</div>
+    <div class="auth-sub">Renseignez vos informations pour activer votre carte MobiPass.</div>
+
+    <div class="auth-field-label">Prénom</div>
+    <input id="auth-firstname" class="auth-input" placeholder="Ex : Mouhamadou">
+
+    <div class="auth-field-label">Nom</div>
+    <input id="auth-lastname" class="auth-input" placeholder="Ex : Diallo">
+
+    <div class="auth-field-label">Email</div>
+    <input id="auth-email" class="auth-input" type="email" placeholder="Ex : mouhamadou@email.com">
+
+    <div class="auth-field-label">Numéro de téléphone</div>
+    <input class="auth-input" placeholder="Bientôt disponible" disabled>
+    <div class="auth-input-soon">La vérification par téléphone sera activée prochainement.</div>
+
+    <div id="auth-error" class="auth-error"></div>
+
+    <button class="btn btn-primary" style="width:100%; margin-top:6px;" onclick="submitSignup()">Créer mon compte</button>
+    <div class="auth-footer">En créant un compte, vous acceptez les conditions d'utilisation de MobiPass.</div>
+  </div>
+</div>
+
 <script>
+  var ALL_SCREENS = ['voyageur','operateur','terminal','notifications','parametres','lignes'];
+  var TAB_SCREENS = ['voyageur','operateur','terminal'];
+
   function showScreen(name){
-    ['voyageur','operateur','terminal'].forEach(function(s){
-      document.getElementById('screen-'+s).classList.toggle('active', name===s);
-      document.getElementById('nav-'+s).style.display = name===s ? 'block' : 'none';
-      document.getElementById('btn-'+s).classList.toggle('active', name===s);
-      document.getElementById('mbtn-'+s).classList.toggle('active', name===s);
+    ALL_SCREENS.forEach(function(s){
+      var el = document.getElementById('screen-'+s);
+      if(el) el.classList.toggle('active', name===s);
     });
+    TAB_SCREENS.forEach(function(s){
+      var navEl = document.getElementById('nav-'+s);
+      if(navEl) navEl.style.display = name===s ? 'block' : 'none';
+      var btnEl = document.getElementById('btn-'+s);
+      if(btnEl) btnEl.classList.toggle('active', name===s);
+      var mbtnEl = document.getElementById('mbtn-'+s);
+      if(mbtnEl) mbtnEl.classList.toggle('active', name===s);
+    });
+    window.scrollTo(0,0);
   }
 
   var scenarios = {
@@ -933,6 +1141,95 @@
   }
 
   renderWallet();
+
+  /* ================= Tiroir mobile ================= */
+  function openDrawer(){ document.getElementById('drawer-overlay').classList.add('open'); }
+  function closeDrawer(){ document.getElementById('drawer-overlay').classList.remove('open'); }
+
+  /* ================= Inscription ================= */
+  function submitSignup(){
+    var first = document.getElementById('auth-firstname').value.trim();
+    var last = document.getElementById('auth-lastname').value.trim();
+    var email = document.getElementById('auth-email').value.trim();
+    var errorEl = document.getElementById('auth-error');
+
+    if(!first || !last){
+      errorEl.textContent = 'Merci de renseigner votre prénom et votre nom.';
+      return;
+    }
+    var emailOk = /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
+    if(!emailOk){
+      errorEl.textContent = 'Merci d\'entrer une adresse email valide.';
+      return;
+    }
+    errorEl.textContent = '';
+
+    var fullName = first + ' ' + last;
+    var initials = (first[0] || '').toUpperCase() + (last[0] || '').toUpperCase();
+
+    document.getElementById('voyageur-title').textContent = 'Bonsoir, ' + first;
+    document.getElementById('voyageur-avatar').textContent = initials;
+    document.getElementById('mcard-name').textContent = fullName;
+
+    document.getElementById('profile-firstname').value = first;
+    document.getElementById('profile-lastname').value = last;
+    document.getElementById('profile-email').value = email;
+
+    document.getElementById('auth-overlay').classList.add('hidden');
+    showToast('Bienvenue sur MobiPass, ' + first + ' !');
+  }
+
+  /* ================= Notifications ================= */
+  var notifications = [
+    {icon:'⏰', color:'#F79009', title:'Abonnement TER bientôt épuisé', desc:'Il vous reste 14 trajets sur votre pass 20 trajets.', time:'Il y a 2 h'},
+    {icon:'✓', color:'#12B76A', title:'Recharge effectuée', desc:'Votre solde a été mis à jour avec succès.', time:'Il y a 5 h'},
+    {icon:'🚌', color:'#2F6FED', title:'Nouvelle ligne AFTU', desc:'La ligne 63 dessert désormais Yeumbeul.', time:'Hier'},
+    {icon:'📅', color:'#7A5AF8', title:'Abonnement BRT à renouveler', desc:'Votre abonnement mensuel expire le 30 septembre.', time:'Il y a 2 jours'}
+  ];
+  function renderNotifications(){
+    var html = '';
+    notifications.forEach(function(n){
+      html += '<div class="trip-row">' +
+        '<div class="trip-icon" style="background:'+n.color+';">'+n.icon+'</div>' +
+        '<div class="trip-main"><div class="trip-route">'+n.title+'</div><div class="trip-time">'+n.desc+'</div></div>' +
+        '<div class="trip-amount" style="font-weight:500; color:var(--muted); font-size:11px;">'+n.time+'</div>' +
+      '</div>';
+    });
+    document.getElementById('notifications-list').innerHTML = html;
+  }
+  renderNotifications();
+
+  /* ================= Lignes & horaires ================= */
+  var lignesData = {
+    brt: [
+      {name:'Ligne BRT — Axe Guédiawaye', horaire:'05:30 – 22:30 · Toutes les 6 min'},
+      {name:'Ligne BRT — Terminus Petersen', horaire:'05:30 – 22:30 · Toutes les 6 min'}
+    ],
+    ter: [
+      {name:'TER — Dakar ↔ Diamniadio', horaire:'05:00 – 23:00 · Toutes les 20 min'},
+      {name:'TER — Diamniadio ↔ AIBD', horaire:'05:00 – 23:00 · Toutes les 30 min'}
+    ],
+    ddd: [
+      {name:'Ligne 7 — Pikine ↔ Petersen', horaire:'06:00 – 21:30 · Toutes les 15 min'},
+      {name:'Ligne 14 — Ouakam ↔ Parcelles', horaire:'06:00 – 21:30 · Toutes les 20 min'}
+    ],
+    aftu: [
+      {name:'Ligne 52 — Parcelles ↔ Thiaroye', horaire:'06:00 – 20:30 · Toutes les 10 min'},
+      {name:'Ligne 12 — Petersen ↔ Gare', horaire:'06:00 – 20:30 · Toutes les 12 min'}
+    ]
+  };
+  function selectLignesOp(op){
+    document.querySelectorAll('[data-lop]').forEach(function(el){
+      el.classList.toggle('active', el.getAttribute('data-lop')===op);
+    });
+    document.getElementById('lignes-title').textContent = 'Lignes ' + opFullName(op);
+    var html = '';
+    lignesData[op].forEach(function(l){
+      html += '<div class="settle-row"><div><div class="sub-name">'+l.name+'</div><div class="sub-meta">'+l.horaire+'</div></div></div>';
+    });
+    document.getElementById('lignes-list').innerHTML = html;
+  }
+  selectLignesOp('brt');
 </script>
 
 </body>
