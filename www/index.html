@@ -1,3 +1,4 @@
+
 <!DOCTYPE html>
 <html lang="fr">
 <head>
@@ -143,8 +144,53 @@
   .btn{
     border:0; border-radius:9px; padding:10px 16px; font-size:13px; font-weight:600; cursor:pointer; font-family:inherit;
   }
+  .btn:disabled{ opacity:.5; cursor:not-allowed; }
   .btn-primary{ background:var(--blue); color:#fff; }
   .btn-ghost{ background:var(--blue-soft); color:var(--blue); }
+
+  /* ---- Modal (bottom sheet) ---- */
+  .modal-overlay{
+    position:fixed; inset:0; background:rgba(11,18,32,.55);
+    display:none; align-items:flex-end; justify-content:center; z-index:100;
+  }
+  .modal-overlay.open{ display:flex; }
+  .modal-sheet{
+    background:#fff; width:100%; max-width:480px; border-radius:20px 20px 0 0;
+    padding:10px 22px 26px; max-height:85vh; overflow-y:auto;
+    animation:slideUp .18s ease;
+  }
+  @keyframes slideUp{ from{ transform:translateY(24px); opacity:0; } to{ transform:translateY(0); opacity:1; } }
+  .modal-handle{ width:40px; height:4px; background:var(--border); border-radius:4px; margin:8px auto 16px; }
+  .modal-title{ font-size:16px; font-weight:700; margin-bottom:4px; }
+  .modal-sub{ font-size:12.5px; color:var(--muted); margin-bottom:18px; }
+
+  .amount-grid{ display:grid; grid-template-columns:repeat(2,1fr); gap:10px; margin-bottom:14px; }
+  .amount-option{
+    border:1.5px solid var(--border); border-radius:10px; padding:12px; text-align:center;
+    font-weight:700; font-size:14px; cursor:pointer; user-select:none;
+  }
+  .amount-option.selected{ border-color:var(--blue); background:var(--blue-soft); color:var(--blue); }
+
+  .field-label{ font-size:12px; font-weight:600; color:var(--muted); margin:14px 0 6px; }
+  .field-input{
+    width:100%; border:1.5px solid var(--border); border-radius:10px; padding:11px 12px;
+    font-size:14px; font-family:inherit;
+  }
+
+  .plan-option{ border:1.5px solid var(--border); border-radius:12px; padding:14px; margin-bottom:10px; cursor:pointer; }
+  .plan-option.selected{ border-color:var(--blue); background:var(--blue-soft); }
+  .plan-option .plan-name{ font-weight:700; font-size:13.5px; }
+  .plan-option .plan-price{ font-weight:700; font-size:13.5px; color:var(--blue); }
+  .plan-option .plan-desc{ font-size:12px; color:var(--muted); margin-top:3px; }
+  .plan-row-top{ display:flex; justify-content:space-between; gap:10px; }
+
+  .toast{
+    position:fixed; bottom:24px; left:50%; transform:translateX(-50%);
+    background:#101828; color:#fff; padding:12px 20px; border-radius:10px;
+    font-size:13px; font-weight:600; z-index:200; opacity:0; transition:opacity .25s ease;
+    pointer-events:none; max-width:88%; text-align:center;
+  }
+  .toast.show{ opacity:1; }
 
   .op-select{ display:flex; gap:8px; margin-bottom:20px; flex-wrap:wrap; }
   .op-pill{
@@ -314,7 +360,7 @@
             <div class="mcard-bottom">
               <div>
                 <div class="mcard-balance-label">Solde disponible</div>
-                <div class="mcard-balance">2 450 FCFA</div>
+                <div id="wallet-balance" class="mcard-balance">2 450 FCFA</div>
               </div>
               <div class="mcard-status">Carte active</div>
             </div>
@@ -322,102 +368,23 @@
 
           <div class="card" style="display:flex; flex-direction:column; justify-content:center; gap:12px;">
             <div class="sub">Actions rapides</div>
-            <button class="btn btn-primary">Recharger le solde</button>
-            <button class="btn btn-ghost">Souscrire un abonnement</button>
+            <button class="btn btn-primary" onclick="openModal('recharge')">Recharger le solde</button>
+            <button class="btn btn-ghost" onclick="openModal('subscribe')">Souscrire un abonnement</button>
           </div>
         </div>
 
         <div class="grid grid-2" style="align-items:start;">
           <div class="card">
             <h3>Mes abonnements</h3>
-
-            <div class="sub-row">
-              <div style="display:flex; align-items:center; gap:12px;">
-                <div class="op-mark" style="background:#2F6FED;">BRT</div>
-                <div>
-                  <div class="sub-name">Abonnement mensuel — Toutes zones</div>
-                  <div class="sub-meta">Valide jusqu'au 30 sept. 2026</div>
-                </div>
-              </div>
-              <span class="badge ok">Actif</span>
-            </div>
-
-            <div class="sub-row">
-              <div style="display:flex; align-items:center; gap:12px;">
-                <div class="op-mark" style="background:#F04438;">TER</div>
-                <div>
-                  <div class="sub-name">Pass 20 trajets</div>
-                  <div class="sub-meta">14 trajets restants</div>
-                  <div class="progress"><div style="width:70%; background:#F04438;"></div></div>
-                </div>
-              </div>
-              <span class="badge ok">Actif</span>
-            </div>
-
-            <div class="sub-row">
-              <div style="display:flex; align-items:center; gap:12px;">
-                <div class="op-mark" style="background:#12B76A;">DDD</div>
-                <div>
-                  <div class="sub-name">Aucun abonnement</div>
-                  <div class="sub-meta">Tarif normal appliqué au trajet</div>
-                </div>
-              </div>
-              <span class="badge no">Non inclus</span>
-            </div>
-
-            <div class="sub-row">
-              <div style="display:flex; align-items:center; gap:12px;">
-                <div class="op-mark" style="background:#F79009;">AFTU</div>
-                <div>
-                  <div class="sub-name">Aucun abonnement</div>
-                  <div class="sub-meta">Tarif normal appliqué au trajet</div>
-                </div>
-              </div>
-              <span class="badge no">Non inclus</span>
-            </div>
+            <div id="subscriptions-list"></div>
           </div>
 
           <div class="card">
             <h3>Historique des trajets</h3>
-
-            <div class="trip-row">
-              <div class="trip-icon" style="background:#2F6FED;">BRT</div>
-              <div class="trip-main">
-                <div class="trip-route">Liberté → Guédiawaye</div>
-                <div class="trip-time">Aujourd'hui, 10:24</div>
-              </div>
-              <div class="trip-amount"><span class="free">Inclus</span></div>
-            </div>
-
-            <div class="trip-row">
-              <div class="trip-icon" style="background:#F04438;">TER</div>
-              <div class="trip-main">
-                <div class="trip-route">Dakar → Diamniadio</div>
-                <div class="trip-time">Hier, 18:41</div>
-              </div>
-              <div class="trip-amount">1 trajet déduit</div>
-            </div>
-
-            <div class="trip-row">
-              <div class="trip-icon" style="background:#12B76A;">DDD</div>
-              <div class="trip-main">
-                <div class="trip-route">Pikine → Rufisque</div>
-                <div class="trip-time">Hier, 09:12</div>
-              </div>
-              <div class="trip-amount">300 FCFA</div>
-            </div>
-
-            <div class="trip-row">
-              <div class="trip-icon" style="background:#F79009;">AFTU</div>
-              <div class="trip-main">
-                <div class="trip-route">Ligne 52 : Parcelles → Thiaroye</div>
-                <div class="trip-time">27 août, 07:55</div>
-              </div>
-              <div class="trip-amount">200 FCFA</div>
-            </div>
+            <div id="trip-history"></div>
 
             <div style="margin-top:12px;">
-              <span class="sub" style="color:var(--blue); font-weight:600; cursor:default;">Voir tout l'historique</span>
+              <span class="sub" style="color:var(--blue); font-weight:600; cursor:pointer;" onclick="showToast('Historique complet — bientôt disponible')">Voir tout l'historique</span>
             </div>
           </div>
         </div>
@@ -483,7 +450,7 @@
               <div id="clearing-net" class="settle-amt pos" style="font-size:15px;">+ 955 000 FCFA</div>
             </div>
 
-            <button class="btn btn-ghost" style="margin-top:14px; width:100%;">Voir le rapport de compensation</button>
+            <button class="btn btn-ghost" style="margin-top:14px; width:100%;" onclick="showToast('Rapport de compensation — bientôt disponible')">Voir le rapport de compensation</button>
           </div>
 
           <div class="card">
@@ -491,7 +458,7 @@
             <div id="terminals-rows"></div>
 
             <div style="margin-top:14px;">
-              <span class="sub" style="color:var(--blue); font-weight:600; cursor:default;">Gérer tous les terminaux</span>
+              <span class="sub" style="color:var(--blue); font-weight:600; cursor:pointer;" onclick="showToast('Gestion des terminaux — bientôt disponible')">Gérer tous les terminaux</span>
             </div>
           </div>
         </div>
@@ -555,6 +522,15 @@
 
   </div>
 </div>
+
+<div id="modal-overlay" class="modal-overlay" onclick="if(event.target===this) closeModal()">
+  <div class="modal-sheet">
+    <div class="modal-handle"></div>
+    <div id="modal-body"></div>
+  </div>
+</div>
+
+<div id="toast" class="toast"></div>
 
 <script>
   function showScreen(name){
@@ -755,6 +731,208 @@
 
   selectOperator('brt');
   runScenario('included');
+
+  /* ================= VOYAGEUR — actions fonctionnelles ================= */
+
+  var OP_COLOR = { brt:'#2F6FED', ter:'#F04438', ddd:'#12B76A', aftu:'#F79009' };
+  var OP_LABEL = { brt:'BRT', ter:'TER', ddd:'DDD', aftu:'AFTU' };
+  function opFullName(op){ return { brt:'BRT Dakar', ter:'TER Sénégal', ddd:'Dakar Dem Dikk', aftu:'AFTU' }[op]; }
+  function fmtFCFA(n){ return n.toLocaleString('fr-FR') + ' FCFA'; }
+
+  var wallet = {
+    balance: 2450,
+    subscriptions: {
+      brt: { active:true, label:'Abonnement mensuel — Toutes zones', meta:"Valide jusqu'au 30 sept. 2026" },
+      ter: { active:true, label:'Pass 20 trajets', meta:'14 trajets restants', progress:70 },
+      ddd: { active:false },
+      aftu: { active:false }
+    },
+    trips: [
+      {op:'brt', route:'Liberté → Guédiawaye', time:"Aujourd'hui, 10:24", amount:'Inclus', free:true},
+      {op:'ter', route:'Dakar → Diamniadio', time:'Hier, 18:41', amount:'1 trajet déduit'},
+      {op:'ddd', route:'Pikine → Rufisque', time:'Hier, 09:12', amount:'300 FCFA'},
+      {op:'aftu', route:'Ligne 52 : Parcelles → Thiaroye', time:'27 août, 07:55', amount:'200 FCFA'}
+    ]
+  };
+
+  function renderWallet(){
+    document.getElementById('wallet-balance').textContent = fmtFCFA(wallet.balance);
+
+    var subsHtml = '';
+    ['brt','ter','ddd','aftu'].forEach(function(op){
+      var s = wallet.subscriptions[op];
+      subsHtml += '<div class="sub-row">' +
+        '<div style="display:flex; align-items:center; gap:12px;">' +
+          '<div class="op-mark" style="background:'+OP_COLOR[op]+';">'+OP_LABEL[op]+'</div>' +
+          '<div>' +
+            '<div class="sub-name">'+(s.active ? s.label : 'Aucun abonnement')+'</div>' +
+            '<div class="sub-meta">'+(s.active ? s.meta : 'Tarif normal appliqué au trajet')+'</div>' +
+            (s.active && s.progress!=null ? '<div class="progress"><div style="width:'+s.progress+'%; background:'+OP_COLOR[op]+';"></div></div>' : '') +
+          '</div>' +
+        '</div>' +
+        '<span class="badge '+(s.active?'ok':'no')+'">'+(s.active?'Actif':'Non inclus')+'</span>' +
+      '</div>';
+    });
+    document.getElementById('subscriptions-list').innerHTML = subsHtml;
+
+    var tripsHtml = '';
+    wallet.trips.slice(0,5).forEach(function(t){
+      tripsHtml += '<div class="trip-row">' +
+        '<div class="trip-icon" style="background:'+OP_COLOR[t.op]+';">'+OP_LABEL[t.op]+'</div>' +
+        '<div class="trip-main"><div class="trip-route">'+t.route+'</div><div class="trip-time">'+t.time+'</div></div>' +
+        '<div class="trip-amount">'+(t.free ? '<span class="free">'+t.amount+'</span>' : t.amount)+'</div>' +
+      '</div>';
+    });
+    document.getElementById('trip-history').innerHTML = tripsHtml;
+  }
+
+  function showToast(msg){
+    var t = document.getElementById('toast');
+    t.textContent = msg;
+    t.classList.add('show');
+    clearTimeout(window.__toastTimer);
+    window.__toastTimer = setTimeout(function(){ t.classList.remove('show'); }, 2200);
+  }
+
+  function closeModal(){
+    document.getElementById('modal-overlay').classList.remove('open');
+  }
+
+  var rechargeSelected = 1000;
+
+  function openModal(type){
+    var body = document.getElementById('modal-body');
+
+    if(type === 'recharge'){
+      rechargeSelected = 1000;
+      var amounts = [500, 1000, 2000, 5000];
+      var amtHtml = amounts.map(function(a){
+        return '<div class="amount-option'+(a===1000?' selected':'')+'" data-amt="'+a+'" onclick="selectAmount('+a+')">'+fmtFCFA(a)+'</div>';
+      }).join('');
+      body.innerHTML =
+        '<div class="modal-title">Recharger le solde</div>' +
+        '<div class="modal-sub">Solde actuel : '+fmtFCFA(wallet.balance)+'</div>' +
+        '<div class="amount-grid" id="amount-grid">'+amtHtml+'</div>' +
+        '<div class="field-label">Ou montant personnalisé (FCFA)</div>' +
+        '<input type="number" id="custom-amount" class="field-input" placeholder="Ex : 1500" oninput="selectCustomAmount(this.value)">' +
+        '<button class="btn btn-primary" style="width:100%; margin-top:18px;" onclick="confirmRecharge()">Confirmer la recharge</button>';
+    } else if(type === 'subscribe'){
+      var opsHtml = ['brt','ter','ddd','aftu'].map(function(op){
+        return '<div class="op-pill" data-op="'+op+'" onclick="selectSubscribeOp(\''+op+'\')"><span class="op-dot" style="background:'+OP_COLOR[op]+';"></span> '+opFullName(op)+'</div>';
+      }).join('');
+      body.innerHTML =
+        '<div class="modal-title">Souscrire un abonnement</div>' +
+        '<div class="modal-sub">Choisissez un réseau, puis une formule</div>' +
+        '<div id="subscribe-ops" style="display:flex; gap:8px; flex-wrap:wrap; margin-bottom:16px;">'+opsHtml+'</div>' +
+        '<div id="subscribe-plans"></div>' +
+        '<button class="btn btn-primary" style="width:100%; margin-top:8px;" id="confirm-subscribe-btn" disabled>Choisissez un réseau</button>';
+      document.getElementById('confirm-subscribe-btn').onclick = confirmSubscribe;
+    }
+
+    document.getElementById('modal-overlay').classList.add('open');
+  }
+
+  function selectAmount(a){
+    rechargeSelected = a;
+    document.querySelectorAll('#amount-grid .amount-option').forEach(function(el){
+      el.classList.toggle('selected', parseInt(el.getAttribute('data-amt'), 10) === a);
+    });
+    var custom = document.getElementById('custom-amount');
+    if(custom) custom.value = '';
+  }
+  function selectCustomAmount(v){
+    var n = parseInt(v, 10);
+    rechargeSelected = isNaN(n) ? 0 : n;
+    document.querySelectorAll('#amount-grid .amount-option').forEach(function(el){ el.classList.remove('selected'); });
+  }
+  function confirmRecharge(){
+    if(!rechargeSelected || rechargeSelected <= 0){ showToast('Entrez un montant valide'); return; }
+    wallet.balance += rechargeSelected;
+    var amt = rechargeSelected;
+    renderWallet();
+    closeModal();
+    showToast('Solde rechargé de ' + fmtFCFA(amt));
+  }
+
+  var subscribePlans = {
+    brt: [
+      {id:'mensuel', name:'Mensuel — Toutes zones', price:'18 000 FCFA', desc:'Trajets illimités pendant 30 jours'},
+      {id:'pass10', name:'Pass 10 trajets', price:'3 500 FCFA', desc:'10 trajets à utiliser librement'}
+    ],
+    ter: [
+      {id:'pass20', name:'Pass 20 trajets', price:'12 000 FCFA', desc:'20 trajets, valable 30 jours'},
+      {id:'mensuel', name:'Mensuel — Toutes zones', price:'25 000 FCFA', desc:'Trajets illimités pendant 30 jours'}
+    ],
+    ddd: [
+      {id:'mensuel', name:'Mensuel', price:'15 000 FCFA', desc:'Trajets illimités pendant 30 jours'},
+      {id:'pass10', name:'Pass 10 trajets', price:'2 500 FCFA', desc:'10 trajets à utiliser librement'}
+    ],
+    aftu: [
+      {id:'mensuel', name:'Mensuel', price:'10 000 FCFA', desc:'Trajets illimités pendant 30 jours'}
+    ]
+  };
+
+  var selectedSubscribeOp = null;
+  var selectedSubscribePlan = null;
+
+  function selectSubscribeOp(op){
+    selectedSubscribeOp = op;
+    selectedSubscribePlan = null;
+    document.querySelectorAll('#subscribe-ops .op-pill').forEach(function(el){
+      el.classList.toggle('active', el.getAttribute('data-op') === op);
+    });
+    var plans = subscribePlans[op];
+    var html = '<div class="field-label">Formules disponibles</div>';
+    plans.forEach(function(p){
+      html += '<div class="plan-option" data-plan="'+p.id+'" onclick="selectSubscribePlan(\''+p.id+'\')">' +
+        '<div class="plan-row-top"><div class="plan-name">'+p.name+'</div><div class="plan-price">'+p.price+'</div></div>' +
+        '<div class="plan-desc">'+p.desc+'</div>' +
+      '</div>';
+    });
+    document.getElementById('subscribe-plans').innerHTML = html;
+    updateConfirmSubscribeBtn();
+  }
+  function selectSubscribePlan(planId){
+    selectedSubscribePlan = planId;
+    document.querySelectorAll('#subscribe-plans .plan-option').forEach(function(el){
+      el.classList.toggle('selected', el.getAttribute('data-plan') === planId);
+    });
+    updateConfirmSubscribeBtn();
+  }
+  function updateConfirmSubscribeBtn(){
+    var btn = document.getElementById('confirm-subscribe-btn');
+    if(!btn) return;
+    if(selectedSubscribeOp && selectedSubscribePlan){
+      btn.disabled = false;
+      btn.textContent = 'Confirmer l\'abonnement';
+    } else if(selectedSubscribeOp){
+      btn.disabled = true;
+      btn.textContent = 'Choisissez une formule';
+    } else {
+      btn.disabled = true;
+      btn.textContent = 'Choisissez un réseau';
+    }
+  }
+  function confirmSubscribe(){
+    if(!selectedSubscribeOp || !selectedSubscribePlan) return;
+    var plan = subscribePlans[selectedSubscribeOp].filter(function(p){ return p.id === selectedSubscribePlan; })[0];
+    var isPass = plan.id.indexOf('pass') === 0;
+    var tripsMatch = plan.name.match(/\d+/);
+    wallet.subscriptions[selectedSubscribeOp] = {
+      active:true,
+      label: plan.name,
+      meta: isPass ? (tripsMatch ? tripsMatch[0] : '') + ' trajets restants' : "Valide jusqu'au 30 sept. 2026",
+      progress: isPass ? 100 : null
+    };
+    var opName = opFullName(selectedSubscribeOp);
+    renderWallet();
+    closeModal();
+    showToast('Abonnement ' + opName + ' activé');
+    selectedSubscribeOp = null;
+    selectedSubscribePlan = null;
+  }
+
+  renderWallet();
 </script>
 
 </body>
