@@ -35,7 +35,7 @@ jobs:
         run: npx cap sync android
 
       - name: Générer l'icône de l'application
-        run: npx capacitor-assets generate --android
+        run: npx capacitor-assets generate --android --assetPath .
 
       - name: Compiler l'APK (debug)
         working-directory: android
@@ -48,3 +48,6 @@ jobs:
         with:
           name: mobipass-debug-apk
           path: android/app/build/outputs/apk/debug/app-debug.apk
+
+
+
