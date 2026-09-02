@@ -1058,16 +1058,7 @@
         '<input type="number" id="custom-amount" class="field-input" placeholder="Ex : 1500" oninput="selectCustomAmount(this.value)">' +
         '<button class="btn btn-primary" style="width:100%; margin-top:18px;" onclick="confirmRecharge()">Confirmer la recharge</button>';
     } else if(type === 'subscribe'){
-      var opsHtml = ['brt','ter','ddd','aftu'].map(function(op){
-        return '<div class="op-pill" data-op="'+op+'" onclick="selectSubscribeOp(\''+op+'\')"><span class="op-dot" style="background:'+OP_COLOR[op]+';"></span> '+opFullName(op)+'</div>';
-      }).join('');
-      body.innerHTML =
-        '<div class="modal-title">Souscrire un abonnement</div>' +
-        '<div class="modal-sub">Choisissez un réseau, puis une formule</div>' +
-        '<div id="subscribe-ops" style="display:flex; gap:8px; flex-wrap:wrap; margin-bottom:16px;">'+opsHtml+'</div>' +
-        '<div id="subscribe-plans"></div>' +
-        '<button class="btn btn-primary" style="width:100%; margin-top:8px;" id="confirm-subscribe-btn" disabled>Choisissez un réseau</button>';
-      document.getElementById('confirm-subscribe-btn').onclick = confirmSubscribe;
+      renderSubscribeTypeChoice();
     }
 
     document.getElementById('modal-overlay').classList.add('open');
@@ -1095,6 +1086,8 @@
     showToast('Solde rechargé de ' + fmtFCFA(amt));
   }
 
+  /* ================= Abonnements — 3 types ================= */
+
   var subscribePlans = {
     brt: [
       {id:'mensuel', name:'Mensuel — Toutes zones', price:'18 000 FCFA', desc:'Trajets illimités pendant 30 jours'},
@@ -1113,9 +1106,54 @@
     ]
   };
 
+  var toutPassPlans = [
+    {id:'tp_mensuel', name:'Tout Pass Mensuel', price:'45 000 FCFA', desc:'Trajets illimités sur BRT, TER, DDD et AFTU, 30 jours'},
+    {id:'tp_pass40', name:'Tout Pass 40 trajets', price:'30 000 FCFA', desc:'40 trajets à répartir librement entre les 4 réseaux, 30 jours'}
+  ];
+
+  var MIXTE_PRICE_PER_OP = 9000;
+
   var selectedSubscribeOp = null;
   var selectedSubscribePlan = null;
+  var selectedToutPassPlan = null;
+  var selectedMixteOps = [];
 
+  function renderSubscribeTypeChoice(){
+    var body = document.getElementById('modal-body');
+    body.innerHTML =
+      '<div class="modal-title">Souscrire un abonnement</div>' +
+      '<div class="modal-sub">Choisissez le type de formule</div>' +
+      '<div class="plan-option" onclick="renderSubscribeIndividual()">' +
+        '<div class="plan-name">Un seul réseau</div>' +
+        '<div class="plan-desc">BRT, TER, DDD ou AFTU — pour vos trajets sur un réseau précis</div>' +
+      '</div>' +
+      '<div class="plan-option" onclick="renderSubscribeToutPass()">' +
+        '<div class="plan-row-top"><div class="plan-name">Tout Pass — 4 réseaux</div><div class="plan-price">dès 30 000 FCFA</div></div>' +
+        '<div class="plan-desc">Un seul abonnement valable sur BRT, TER, Dakar Dem Dikk et AFTU</div>' +
+      '</div>' +
+      '<div class="plan-option" onclick="renderSubscribeMixte()">' +
+        '<div class="plan-name">Formule mixte</div>' +
+        '<div class="plan-desc">Choisissez 2 ou 3 réseaux précis, à prix réduit par rapport à des abonnements séparés</div>' +
+      '</div>';
+  }
+
+  /* --- Un seul réseau --- */
+  function renderSubscribeIndividual(){
+    selectedSubscribeOp = null;
+    selectedSubscribePlan = null;
+    var body = document.getElementById('modal-body');
+    var opsHtml = ['brt','ter','ddd','aftu'].map(function(op){
+      return '<div class="op-pill" data-op="'+op+'" onclick="selectSubscribeOp(\''+op+'\')"><span class="op-dot" style="background:'+OP_COLOR[op]+';"></span> '+opFullName(op)+'</div>';
+    }).join('');
+    body.innerHTML =
+      '<div class="modal-title">Un seul réseau</div>' +
+      '<div class="modal-sub">Choisissez un réseau, puis une formule</div>' +
+      '<div id="subscribe-ops" style="display:flex; gap:8px; flex-wrap:wrap; margin-bottom:16px;">'+opsHtml+'</div>' +
+      '<div id="subscribe-plans"></div>' +
+      '<button class="btn btn-primary" style="width:100%; margin-top:8px;" id="confirm-subscribe-btn" disabled>Choisissez un réseau</button>' +
+      '<div class="auth-footer" style="cursor:pointer;" onclick="renderSubscribeTypeChoice()">← Retour aux types de formule</div>';
+    document.getElementById('confirm-subscribe-btn').onclick = confirmSubscribe;
+  }
   function selectSubscribeOp(op){
     selectedSubscribeOp = op;
     selectedSubscribePlan = null;
@@ -1171,6 +1209,108 @@
     showToast('Abonnement ' + opName + ' activé');
     selectedSubscribeOp = null;
     selectedSubscribePlan = null;
+  }
+
+  /* --- Tout Pass --- */
+  function renderSubscribeToutPass(){
+    selectedToutPassPlan = null;
+    var body = document.getElementById('modal-body');
+    var html = '<div class="modal-title">Tout Pass — 4 réseaux</div>' +
+      '<div class="modal-sub">Un seul abonnement, valable sur BRT, TER, Dakar Dem Dikk et AFTU</div>';
+    toutPassPlans.forEach(function(p){
+      html += '<div class="plan-option" data-tp="'+p.id+'" onclick="selectToutPassPlan(\''+p.id+'\')">' +
+        '<div class="plan-row-top"><div class="plan-name">'+p.name+'</div><div class="plan-price">'+p.price+'</div></div>' +
+        '<div class="plan-desc">'+p.desc+'</div>' +
+      '</div>';
+    });
+    html += '<button class="btn btn-primary" style="width:100%; margin-top:8px;" id="confirm-toutpass-btn" disabled>Choisissez une formule</button>' +
+      '<div class="auth-footer" style="cursor:pointer;" onclick="renderSubscribeTypeChoice()">← Retour aux types de formule</div>';
+    body.innerHTML = html;
+    document.getElementById('confirm-toutpass-btn').onclick = confirmToutPass;
+  }
+  function selectToutPassPlan(planId){
+    selectedToutPassPlan = planId;
+    document.querySelectorAll('[data-tp]').forEach(function(el){
+      el.classList.toggle('selected', el.getAttribute('data-tp') === planId);
+    });
+    var btn = document.getElementById('confirm-toutpass-btn');
+    btn.disabled = false;
+    btn.textContent = 'Confirmer le Tout Pass';
+  }
+  function confirmToutPass(){
+    if(!selectedToutPassPlan) return;
+    var plan = toutPassPlans.filter(function(p){ return p.id === selectedToutPassPlan; })[0];
+    var isPass40 = plan.id === 'tp_pass40';
+    ['brt','ter','ddd','aftu'].forEach(function(op){
+      wallet.subscriptions[op] = {
+        active:true,
+        label: plan.name,
+        meta: isPass40 ? '40 trajets partagés entre les 4 réseaux' : "Valide jusqu'au 30 sept. 2026 · tous réseaux",
+        progress: null
+      };
+    });
+    renderWallet();
+    closeModal();
+    showToast('Tout Pass activé sur les 4 réseaux');
+    selectedToutPassPlan = null;
+  }
+
+  /* --- Formule mixte --- */
+  function renderSubscribeMixte(){
+    selectedMixteOps = [];
+    var body = document.getElementById('modal-body');
+    var opsHtml = ['brt','ter','ddd','aftu'].map(function(op){
+      return '<div class="op-pill" data-mop="'+op+'" onclick="toggleMixteOp(\''+op+'\')"><span class="op-dot" style="background:'+OP_COLOR[op]+';"></span> '+opFullName(op)+'</div>';
+    }).join('');
+    body.innerHTML =
+      '<div class="modal-title">Formule mixte</div>' +
+      '<div class="modal-sub">Sélectionnez 2 ou 3 réseaux — le tarif se calcule automatiquement</div>' +
+      '<div id="mixte-ops" style="display:flex; gap:8px; flex-wrap:wrap; margin-bottom:16px;">'+opsHtml+'</div>' +
+      '<div id="mixte-summary" class="sub" style="margin-bottom:14px;">Sélectionnez au moins 2 réseaux</div>' +
+      '<button class="btn btn-primary" style="width:100%; margin-top:8px;" id="confirm-mixte-btn" disabled>Choisissez vos réseaux</button>' +
+      '<div class="auth-footer" style="cursor:pointer;" onclick="renderSubscribeTypeChoice()">← Retour aux types de formule</div>';
+    document.getElementById('confirm-mixte-btn').onclick = confirmMixte;
+  }
+  function toggleMixteOp(op){
+    var idx = selectedMixteOps.indexOf(op);
+    if(idx === -1){
+      if(selectedMixteOps.length >= 3){ showToast('Maximum 3 réseaux pour une formule mixte'); return; }
+      selectedMixteOps.push(op);
+    } else {
+      selectedMixteOps.splice(idx, 1);
+    }
+    document.querySelectorAll('[data-mop]').forEach(function(el){
+      el.classList.toggle('active', selectedMixteOps.indexOf(el.getAttribute('data-mop')) !== -1);
+    });
+    var summary = document.getElementById('mixte-summary');
+    var btn = document.getElementById('confirm-mixte-btn');
+    if(selectedMixteOps.length >= 2){
+      var total = selectedMixteOps.length * MIXTE_PRICE_PER_OP;
+      var names = selectedMixteOps.map(opFullName).join(' + ');
+      summary.textContent = names + ' — ' + fmtFCFA(total) + ' / mois';
+      btn.disabled = false;
+      btn.textContent = 'Confirmer la formule mixte (' + fmtFCFA(total) + ')';
+    } else {
+      summary.textContent = 'Sélectionnez au moins 2 réseaux';
+      btn.disabled = true;
+      btn.textContent = 'Choisissez vos réseaux';
+    }
+  }
+  function confirmMixte(){
+    if(selectedMixteOps.length < 2) return;
+    var names = selectedMixteOps.map(function(op){ return OP_LABEL[op]; }).join(' + ');
+    selectedMixteOps.forEach(function(op){
+      wallet.subscriptions[op] = {
+        active:true,
+        label: 'Abonnement mixte — ' + names,
+        meta: "Valide jusqu'au 30 sept. 2026",
+        progress: null
+      };
+    });
+    renderWallet();
+    closeModal();
+    showToast('Formule mixte activée : ' + names);
+    selectedMixteOps = [];
   }
 
   renderWallet();
