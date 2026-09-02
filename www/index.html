@@ -342,6 +342,7 @@
       <div class="navitem" onclick="showScreen('voyageur')"><span class="dot">◇</span> Historique des trajets</div>
       <div class="navitem" onclick="openModal('recharge')"><span class="dot">◇</span> Recharger le solde</div>
       <div class="navgroup-label">RÉSEAUX</div>
+      <div class="navitem" onclick="showScreen('itineraire')"><span class="dot">◇</span> Calculer un itinéraire</div>
       <div class="navitem" onclick="showScreen('lignes')"><span class="dot">◇</span> Lignes & horaires</div>
       <div class="navitem" onclick="showToast('Tarifs — bientôt disponible')"><span class="dot">◇</span> Tarifs</div>
       <div class="navgroup-label">COMPTE</div>
@@ -388,6 +389,7 @@
       <div class="navitem" onclick="closeDrawer(); openModal('recharge')"><span class="dot">◇</span> Recharger le solde</div>
       <div class="navitem" onclick="closeDrawer(); openModal('subscribe')"><span class="dot">◇</span> Souscrire un abonnement</div>
       <div class="navgroup-label">RÉSEAUX</div>
+      <div class="navitem" onclick="closeDrawer(); showScreen('itineraire')"><span class="dot">◇</span> Calculer un itinéraire</div>
       <div class="navitem" onclick="closeDrawer(); showScreen('lignes')"><span class="dot">◇</span> Lignes & horaires</div>
       <div class="navgroup-label">COMPTE</div>
       <div class="navitem" onclick="closeDrawer(); showScreen('notifications')"><span class="dot">◇</span> Notifications</div>
@@ -447,6 +449,19 @@
         <div style="display:flex; align-items:center; gap:10px; background:var(--blue-soft); border-radius:12px; padding:12px 16px; margin-bottom:18px;">
           <span style="font-size:16px;">ℹ️</span>
           <span style="font-size:12px; color:var(--blue); font-weight:600;">MobiPass ne remplace pas votre carte : elle reste la vôtre. La plateforme la rend simplement acceptée sur les 4 réseaux.</span>
+        </div>
+
+        <div class="card" style="margin-bottom:18px; cursor:pointer;" onclick="showScreen('itineraire')">
+          <div style="display:flex; align-items:center; justify-content:space-between;">
+            <div style="display:flex; align-items:center; gap:14px;">
+              <div class="kpi-icon" style="background:var(--blue-soft); color:var(--blue); font-size:18px;">🧭</div>
+              <div>
+                <div class="sub-name">Où allez-vous ?</div>
+                <div class="sub-meta">Calculez le trajet le plus rapide en combinant les réseaux</div>
+              </div>
+            </div>
+            <span style="color:var(--blue); font-size:18px;">→</span>
+          </div>
         </div>
 
         <div class="grid grid-2" style="align-items:start;">
@@ -694,6 +709,31 @@
       </div>
     </div>
 
+    <!-- ===================== ITINÉRAIRE ===================== -->
+    <div id="screen-itineraire" class="screen">
+      <div class="topbar">
+        <div style="display:flex; align-items:center; gap:12px;">
+          <button class="back-btn" onclick="showScreen('voyageur')">←</button>
+          <div>
+            <h1>Calculer un itinéraire</h1>
+            <p>Le trajet le plus rapide, en combinant les réseaux si besoin</p>
+          </div>
+        </div>
+      </div>
+      <div class="content">
+        <div class="card" style="margin-bottom:18px;">
+          <div class="field-label" style="margin-top:0;">Point de départ</div>
+          <select id="itin-origin" class="field-input"></select>
+          <div class="field-label">Point d'arrivée</div>
+          <select id="itin-destination" class="field-input"></select>
+          <button class="btn btn-primary" style="width:100%; margin-top:16px;" onclick="searchItinerary()">Rechercher l'itinéraire</button>
+          <div id="itin-error" class="auth-error" style="color:var(--red);"></div>
+        </div>
+
+        <div id="itin-results"></div>
+      </div>
+    </div>
+
   </div>
 </div>
 
@@ -764,7 +804,7 @@
 </div>
 
 <script>
-  var ALL_SCREENS = ['voyageur','operateur','terminal','notifications','parametres','lignes'];
+  var ALL_SCREENS = ['voyageur','operateur','terminal','notifications','parametres','lignes','itineraire'];
   var TAB_SCREENS = ['voyageur','operateur','terminal'];
 
   function showScreen(name){
@@ -982,9 +1022,10 @@
 
   var wallet = {
     balance: 2450,
+    pools: {},
     subscriptions: {
-      brt: { active:true, label:'Abonnement mensuel — Toutes zones', meta:"Valide jusqu'au 30 sept. 2026" },
-      ter: { active:true, label:'Pass 20 trajets', meta:'14 trajets restants', progress:70 },
+      brt: { active:true, planType:'illimite', label:'Abonnement mensuel — Toutes zones', validUntilLabel:"30 sept. 2026" },
+      ter: { active:true, planType:'pass', label:'Pass 20 trajets', tripsRemaining:14, tripsTotal:20 },
       ddd: { active:false },
       aftu: { active:false }
     },
@@ -996,19 +1037,64 @@
     ]
   };
 
+  /* Combien de trajets restants pour un abonnement de type "pass" (individuel ou via un pool partagé comme Tout Pass) */
+  function tripsInfo(sub){
+    if(!sub || !sub.active || sub.planType !== 'pass') return null;
+    if(sub.poolId){
+      var pool = wallet.pools[sub.poolId];
+      return pool ? { remaining: pool.remaining, total: pool.total } : null;
+    }
+    return { remaining: sub.tripsRemaining, total: sub.tripsTotal };
+  }
+
+  /* Le cœur du moteur de droits : ce réseau est-il couvert pour ce voyageur, et à quel prix sinon ? */
+  function checkCoverage(op){
+    var s = wallet.subscriptions[op];
+    if(!s || !s.active) return { covered:false, reason:'aucun abonnement' };
+    if(s.planType === 'illimite') return { covered:true, consume:null };
+    if(s.planType === 'pass'){
+      var info = tripsInfo(s);
+      if(info && info.remaining > 0) return { covered:true, consume:{ op:op, poolId:s.poolId || null } };
+      return { covered:false, reason:'pass épuisé' };
+    }
+    return { covered:false, reason:'aucun abonnement' };
+  }
+
+  function consumeTrip(consume){
+    if(!consume) return;
+    if(consume.poolId){
+      wallet.pools[consume.poolId].remaining = Math.max(0, wallet.pools[consume.poolId].remaining - 1);
+    } else {
+      var s = wallet.subscriptions[consume.op];
+      s.tripsRemaining = Math.max(0, s.tripsRemaining - 1);
+    }
+  }
+
   function renderWallet(){
     document.getElementById('wallet-balance').textContent = fmtFCFA(wallet.balance);
 
     var subsHtml = '';
     ['brt','ter','ddd','aftu'].forEach(function(op){
       var s = wallet.subscriptions[op];
+      var meta = '', progress = null;
+      if(s.active){
+        if(s.planType === 'illimite'){
+          meta = "Valide jusqu'au " + s.validUntilLabel;
+        } else if(s.planType === 'pass'){
+          var info = tripsInfo(s);
+          meta = (info ? info.remaining : 0) + ' trajets restants' + (s.poolId ? ' (pool partagé)' : '');
+          progress = info && info.total ? Math.round((info.remaining / info.total) * 100) : null;
+        }
+      } else {
+        meta = 'Tarif normal appliqué au trajet';
+      }
       subsHtml += '<div class="sub-row">' +
         '<div style="display:flex; align-items:center; gap:12px;">' +
           '<div class="op-mark" style="background:'+OP_COLOR[op]+';">'+OP_LABEL[op]+'</div>' +
           '<div>' +
             '<div class="sub-name">'+(s.active ? s.label : 'Aucun abonnement')+'</div>' +
-            '<div class="sub-meta">'+(s.active ? s.meta : 'Tarif normal appliqué au trajet')+'</div>' +
-            (s.active && s.progress!=null ? '<div class="progress"><div style="width:'+s.progress+'%; background:'+OP_COLOR[op]+';"></div></div>' : '') +
+            '<div class="sub-meta">'+meta+'</div>' +
+            (progress!=null ? '<div class="progress"><div style="width:'+progress+'%; background:'+OP_COLOR[op]+';"></div></div>' : '') +
           '</div>' +
         '</div>' +
         '<span class="badge '+(s.active?'ok':'no')+'">'+(s.active?'Actif':'Non inclus')+'</span>' +
@@ -1197,12 +1283,16 @@
     var plan = subscribePlans[selectedSubscribeOp].filter(function(p){ return p.id === selectedSubscribePlan; })[0];
     var isPass = plan.id.indexOf('pass') === 0;
     var tripsMatch = plan.name.match(/\d+/);
-    wallet.subscriptions[selectedSubscribeOp] = {
-      active:true,
-      label: plan.name,
-      meta: isPass ? (tripsMatch ? tripsMatch[0] : '') + ' trajets restants' : "Valide jusqu'au 30 sept. 2026",
-      progress: isPass ? 100 : null
-    };
+    if(isPass){
+      var total = tripsMatch ? parseInt(tripsMatch[0], 10) : 10;
+      wallet.subscriptions[selectedSubscribeOp] = {
+        active:true, planType:'pass', label: plan.name, tripsRemaining: total, tripsTotal: total
+      };
+    } else {
+      wallet.subscriptions[selectedSubscribeOp] = {
+        active:true, planType:'illimite', label: plan.name, validUntilLabel:"30 sept. 2026"
+      };
+    }
     var opName = opFullName(selectedSubscribeOp);
     renderWallet();
     closeModal();
@@ -1241,14 +1331,16 @@
     if(!selectedToutPassPlan) return;
     var plan = toutPassPlans.filter(function(p){ return p.id === selectedToutPassPlan; })[0];
     var isPass40 = plan.id === 'tp_pass40';
-    ['brt','ter','ddd','aftu'].forEach(function(op){
-      wallet.subscriptions[op] = {
-        active:true,
-        label: plan.name,
-        meta: isPass40 ? '40 trajets partagés entre les 4 réseaux' : "Valide jusqu'au 30 sept. 2026 · tous réseaux",
-        progress: null
-      };
-    });
+    if(isPass40){
+      wallet.pools['toutpass'] = { remaining:40, total:40 };
+      ['brt','ter','ddd','aftu'].forEach(function(op){
+        wallet.subscriptions[op] = { active:true, planType:'pass', label: plan.name, poolId:'toutpass' };
+      });
+    } else {
+      ['brt','ter','ddd','aftu'].forEach(function(op){
+        wallet.subscriptions[op] = { active:true, planType:'illimite', label: plan.name, validUntilLabel:"30 sept. 2026 · tous réseaux" };
+      });
+    }
     renderWallet();
     closeModal();
     showToast('Tout Pass activé sur les 4 réseaux');
@@ -1301,10 +1393,7 @@
     var names = selectedMixteOps.map(function(op){ return OP_LABEL[op]; }).join(' + ');
     selectedMixteOps.forEach(function(op){
       wallet.subscriptions[op] = {
-        active:true,
-        label: 'Abonnement mixte — ' + names,
-        meta: "Valide jusqu'au 30 sept. 2026",
-        progress: null
+        active:true, planType:'illimite', label: 'Abonnement mixte — ' + names, validUntilLabel:"30 sept. 2026"
       };
     });
     renderWallet();
@@ -1485,6 +1574,189 @@
     document.getElementById('lignes-list').innerHTML = html;
   }
   selectLignesOp('brt');
+
+  /* ================= Calculateur d'itinéraire multi-réseaux ================= */
+
+  // Graphe simplifié : chaque segment relie deux lieux via un réseau donné (ou une correspondance à pied entre pôles)
+  var ITIN_LEGS = [
+    {op:'brt', from:'Guédiawaye', to:'Liberté 5', duration:18, price:400},
+    {op:'brt', from:'Liberté 5', to:'Petersen', duration:12, price:300},
+    {op:'ddd', from:'Petersen', to:'Pikine', duration:20, price:300},
+    {op:'ddd', from:'Pikine', to:'Rufisque', duration:15, price:300},
+    {op:'ddd', from:'Petersen', to:'Ouakam', duration:18, price:300},
+    {op:'ddd', from:'Ouakam', to:'Parcelles', duration:22, price:300},
+    {op:'aftu', from:'Parcelles', to:'Thiaroye', duration:14, price:200},
+    {op:'aftu', from:'Petersen', to:'Grand Yoff', duration:16, price:200},
+    {op:'correspondance', from:'Petersen', to:'Gare de Dakar', duration:8, price:0},
+    {op:'ter', from:'Gare de Dakar', to:'Rufisque', duration:12, price:800},
+    {op:'ter', from:'Rufisque', to:'Diamniadio', duration:15, price:800},
+    {op:'ter', from:'Diamniadio', to:'AIBD', duration:10, price:800}
+  ];
+
+  var ITIN_PLACES = (function(){
+    var set = {};
+    ITIN_LEGS.forEach(function(l){ set[l.from]=1; set[l.to]=1; });
+    return Object.keys(set).sort();
+  })();
+
+  function populateItinerarySelects(){
+    var o = document.getElementById('itin-origin');
+    var d = document.getElementById('itin-destination');
+    var html = ITIN_PLACES.map(function(p){ return '<option value="'+p+'">'+p+'</option>'; }).join('');
+    o.innerHTML = html;
+    d.innerHTML = html;
+    if(ITIN_PLACES.indexOf('Guédiawaye') !== -1) o.value = 'Guédiawaye';
+    if(ITIN_PLACES.indexOf('AIBD') !== -1) d.value = 'AIBD';
+  }
+
+  // Plus court chemin (en durée) sur le graphe, tous réseaux confondus — c'est ici que se fait la combinaison inter-opérateurs
+  function computeShortestRoute(origin, destination){
+    var adj = {};
+    ITIN_PLACES.forEach(function(p){ adj[p] = []; });
+    ITIN_LEGS.forEach(function(l){
+      adj[l.from].push({ to:l.to, leg:l });
+      adj[l.to].push({ to:l.from, leg:{ op:l.op, from:l.to, to:l.from, duration:l.duration, price:l.price } });
+    });
+
+    var dist = {}, prevLeg = {}, prevPlace = {}, visited = {};
+    ITIN_PLACES.forEach(function(p){ dist[p] = Infinity; });
+    dist[origin] = 0;
+
+    while(true){
+      var current = null, best = Infinity;
+      ITIN_PLACES.forEach(function(p){
+        if(!visited[p] && dist[p] < best){ best = dist[p]; current = p; }
+      });
+      if(current === null) break;
+      if(current === destination) break;
+      visited[current] = true;
+
+      adj[current].forEach(function(edge){
+        var alt = dist[current] + edge.leg.duration;
+        if(alt < dist[edge.to]){
+          dist[edge.to] = alt;
+          prevLeg[edge.to] = edge.leg;
+          prevPlace[edge.to] = current;
+        }
+      });
+    }
+
+    if(dist[destination] === Infinity) return null;
+
+    var legs = [];
+    var cursor = destination;
+    while(cursor !== origin){
+      legs.unshift(prevLeg[cursor]);
+      cursor = prevPlace[cursor];
+    }
+    return { legs:legs, totalDuration:dist[destination] };
+  }
+
+  function searchItinerary(){
+    var origin = document.getElementById('itin-origin').value;
+    var destination = document.getElementById('itin-destination').value;
+    var errorEl = document.getElementById('itin-error');
+
+    if(origin === destination){
+      errorEl.textContent = 'Le point de départ et d\'arrivée doivent être différents.';
+      document.getElementById('itin-results').innerHTML = '';
+      return;
+    }
+    var route = computeShortestRoute(origin, destination);
+    if(!route){
+      errorEl.textContent = 'Aucun itinéraire trouvé entre ces deux points.';
+      document.getElementById('itin-results').innerHTML = '';
+      return;
+    }
+    errorEl.textContent = '';
+    renderItineraryResult(route, origin, destination);
+  }
+
+  function renderItineraryResult(route, origin, destination){
+    var legsHtml = '';
+    var totalToPay = 0;
+    var evaluatedLegs = [];
+
+    route.legs.forEach(function(leg){
+      if(leg.op === 'correspondance'){
+        legsHtml += '<div class="trip-row">' +
+          '<div class="trip-icon" style="background:#5C6789;">🚶</div>' +
+          '<div class="trip-main"><div class="trip-route">'+leg.from+' → '+leg.to+'</div><div class="trip-time">Correspondance à pied · '+leg.duration+' min</div></div>' +
+          '<div class="trip-amount"><span class="free">Gratuit</span></div>' +
+        '</div>';
+        evaluatedLegs.push({ leg:leg, covered:true, consume:null });
+        return;
+      }
+      var coverage = checkCoverage(leg.op);
+      var statusHtml;
+      if(coverage.covered){
+        statusHtml = '<span class="free">Inclus</span>';
+      } else {
+        statusHtml = fmtFCFA(leg.price);
+        totalToPay += leg.price;
+      }
+      legsHtml += '<div class="trip-row">' +
+        '<div class="trip-icon" style="background:'+OP_COLOR[leg.op]+';">'+OP_LABEL[leg.op]+'</div>' +
+        '<div class="trip-main"><div class="trip-route">'+leg.from+' → '+leg.to+'</div><div class="trip-time">'+opFullName(leg.op)+' · '+leg.duration+' min</div></div>' +
+        '<div class="trip-amount">'+statusHtml+'</div>' +
+      '</div>';
+      evaluatedLegs.push({ leg:leg, covered:coverage.covered, consume:coverage.consume || null });
+    });
+
+    var authorized = wallet.balance >= totalToPay;
+    var color = authorized ? '#12B76A' : '#F04438';
+
+    var decisionHtml =
+      '<div class="term-result" style="background:'+color+'; margin-top:16px; padding:24px 20px;">' +
+        '<div class="term-icon" style="background:rgba(255,255,255,.2); width:52px; height:52px; font-size:24px;">'+(authorized?'✓':'✕')+'</div>' +
+        '<div class="term-title">'+(authorized ? 'Accès autorisé' : 'Accès refusé')+'</div>' +
+        '<div class="term-sub">'+(authorized ? 'Solde suffisant pour couvrir ce trajet' : 'Solde insuffisant pour ce trajet')+'</div>' +
+        '<div class="term-divider"></div>' +
+        '<div class="term-amount">'+(totalToPay>0 ? fmtFCFA(totalToPay) : '0 FCFA')+'</div>' +
+        '<div class="term-amount-note">Montant à débiter · Solde actuel : '+fmtFCFA(wallet.balance)+'</div>' +
+      '</div>';
+
+    var actionHtml;
+    if(authorized){
+      actionHtml = '<button class="btn btn-primary" style="width:100%; margin-top:14px;" onclick="confirmItinerary('+encodeURIComponent(JSON.stringify({legs:evaluatedLegs.map(function(e){return {op:e.leg.op, from:e.leg.from, to:e.leg.to, price:e.leg.price, covered:e.covered, consume:e.consume};}), origin:origin, destination:destination, totalToPay:totalToPay}))+')">Confirmer et valider le trajet</button>';
+    } else {
+      var missing = totalToPay - wallet.balance;
+      actionHtml = '<button class="btn btn-primary" style="width:100%; margin-top:14px;" onclick="openModal(\'recharge\')">Recharger le solde (manque '+fmtFCFA(missing)+')</button>';
+    }
+
+    document.getElementById('itin-results').innerHTML =
+      '<div class="card">' +
+        '<h3>Trajet proposé — '+route.totalDuration+' min · '+route.legs.filter(function(l){return l.op!=='correspondance';}).length+' réseau(x)</h3>' +
+        legsHtml +
+      '</div>' +
+      decisionHtml +
+      actionHtml;
+  }
+
+  function confirmItinerary(encoded){
+    var data = JSON.parse(decodeURIComponent(encoded));
+    data.legs.forEach(function(e){
+      if(e.consume) consumeTrip(e.consume);
+    });
+    wallet.balance -= data.totalToPay;
+
+    var networksUsed = [];
+    data.legs.forEach(function(e){ if(e.op !== 'correspondance' && networksUsed.indexOf(e.op) === -1) networksUsed.push(e.op); });
+
+    wallet.trips.unshift({
+      op: networksUsed[0] || 'brt',
+      route: data.origin + ' → ' + data.destination + (networksUsed.length > 1 ? ' (' + networksUsed.length + ' réseaux)' : ''),
+      time: "À l'instant",
+      amount: data.totalToPay > 0 ? fmtFCFA(data.totalToPay) : 'Inclus',
+      free: data.totalToPay === 0
+    });
+
+    renderWallet();
+    showToast('Trajet validé — bon voyage !');
+    showScreen('voyageur');
+  }
+
+  populateItinerarySelects();
 </script>
 
 </body>
