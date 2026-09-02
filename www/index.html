@@ -655,7 +655,7 @@
               </div>
               <span class="badge ok">Activé</span>
             </div>
-            <button class="btn" style="width:100%; margin-top:16px; background:var(--red-soft); color:var(--red);" onclick="showToast('Déconnexion — bientôt disponible')">Se déconnecter</button>
+            <button class="btn" style="width:100%; margin-top:16px; background:var(--red-soft); color:var(--red);" onclick="logout()">Se déconnecter</button>
           </div>
         </div>
       </div>
@@ -1167,17 +1167,47 @@
     var fullName = first + ' ' + last;
     var initials = (first[0] || '').toUpperCase() + (last[0] || '').toUpperCase();
 
-    document.getElementById('voyageur-title').textContent = 'Bonsoir, ' + first;
-    document.getElementById('voyageur-avatar').textContent = initials;
-    document.getElementById('mcard-name').textContent = fullName;
+    localStorage.setItem('mobipass_user', JSON.stringify({ firstName:first, lastName:last, email:email }));
 
-    document.getElementById('profile-firstname').value = first;
-    document.getElementById('profile-lastname').value = last;
-    document.getElementById('profile-email').value = email;
+    applyUserToUI(first, last, email);
 
     document.getElementById('auth-overlay').classList.add('hidden');
     showToast('Bienvenue sur MobiPass, ' + first + ' !');
   }
+
+  function applyUserToUI(first, last, email){
+    var fullName = first + ' ' + last;
+    var initials = (first[0] || '').toUpperCase() + (last[0] || '').toUpperCase();
+    document.getElementById('voyageur-title').textContent = 'Bonsoir, ' + first;
+    document.getElementById('voyageur-avatar').textContent = initials;
+    document.getElementById('mcard-name').textContent = fullName;
+    document.getElementById('profile-firstname').value = first;
+    document.getElementById('profile-lastname').value = last;
+    document.getElementById('profile-email').value = email;
+  }
+
+  function checkExistingSession(){
+    var saved = localStorage.getItem('mobipass_user');
+    if(saved){
+      try{
+        var u = JSON.parse(saved);
+        applyUserToUI(u.firstName, u.lastName, u.email);
+        document.getElementById('auth-overlay').classList.add('hidden');
+      }catch(e){}
+    }
+  }
+
+  function logout(){
+    localStorage.removeItem('mobipass_user');
+    document.getElementById('auth-firstname').value = '';
+    document.getElementById('auth-lastname').value = '';
+    document.getElementById('auth-email').value = '';
+    document.getElementById('auth-overlay').classList.remove('hidden');
+    showScreen('voyageur');
+    closeDrawer();
+  }
+
+  checkExistingSession();
 
   /* ================= Notifications ================= */
   var notifications = [
