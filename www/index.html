@@ -103,6 +103,7 @@
   .mcard-top{ display:flex; justify-content:space-between; align-items:flex-start; }
   .mcard-id{ font-size:11px; letter-spacing:.06em; color:#C7D6FF; }
   .mcard-name{ font-size:16px; font-weight:700; margin-top:4px; }
+  .mcard-sub-id{ font-size:11.5px; color:#C7D6FF; margin-top:5px; letter-spacing:.04em; }
   .mcard-chip{ width:38px; height:28px; border-radius:6px; background:linear-gradient(135deg,#FFD98E,#F79009); }
   .mcard-bottom{ display:flex; justify-content:space-between; align-items:flex-end; }
   .mcard-balance-label{ font-size:11px; color:#C7D6FF; }
@@ -311,6 +312,7 @@
   .auth-input-soon{ font-size:10.5px; color:#F79009; margin-top:5px; }
   .auth-error{ color:#F97066; font-size:12px; margin-top:12px; min-height:16px; }
   .auth-footer{ text-align:center; color:#5C6789; font-size:11.5px; margin-top:18px; }
+  .op-pill[data-authop].selected{ border-color:var(--blue) !important; background:#1B2A55 !important; color:#fff !important; }
 </style>
 </head>
 <body>
@@ -417,11 +419,12 @@
 
       <div class="content">
         <div class="grid grid-2" style="margin-bottom:18px;">
-          <div class="mcard">
+          <div id="mcard" class="mcard">
             <div class="mcard-top">
               <div>
-                <div class="mcard-id">MOBILITY ID · 458 921</div>
+                <div id="mcard-op-label" class="mcard-id">CARTE BRT · RELIÉE À MOBIPASS</div>
                 <div id="mcard-name" class="mcard-name">Mouhamadou Diallo</div>
+                <div id="mcard-number" class="mcard-sub-id">**** **** 9931</div>
               </div>
               <div class="mcard-chip"></div>
             </div>
@@ -430,7 +433,7 @@
                 <div class="mcard-balance-label">Solde disponible</div>
                 <div id="wallet-balance" class="mcard-balance">2 450 FCFA</div>
               </div>
-              <div class="mcard-status">Carte active</div>
+              <div id="mcard-status" class="mcard-status">Acceptée sur 4 réseaux</div>
             </div>
           </div>
 
@@ -439,6 +442,11 @@
             <button class="btn btn-primary" onclick="openModal('recharge')">Recharger le solde</button>
             <button class="btn btn-ghost" onclick="openModal('subscribe')">Souscrire un abonnement</button>
           </div>
+        </div>
+
+        <div style="display:flex; align-items:center; gap:10px; background:var(--blue-soft); border-radius:12px; padding:12px 16px; margin-bottom:18px;">
+          <span style="font-size:16px;">ℹ️</span>
+          <span style="font-size:12px; color:var(--blue); font-weight:600;">MobiPass ne remplace pas votre carte : elle reste la vôtre. La plateforme la rend simplement acceptée sur les 4 réseaux.</span>
         </div>
 
         <div class="grid grid-2" style="align-items:start;">
@@ -704,29 +712,54 @@
     <div class="auth-logo">
       <div class="brand-mark">M</div>
       <div class="name">MobiPass</div>
-      <div class="tag">UNE CARTE · UN COMPTE · TOUS LES TRANSPORTS</div>
+      <div class="tag">VOTRE CARTE, PARTOUT · SANS NOUVELLE CARTE</div>
     </div>
 
-    <div class="auth-title">Créer votre compte</div>
-    <div class="auth-sub">Renseignez vos informations pour activer votre carte MobiPass.</div>
+    <!-- Étape 1 : identité -->
+    <div id="auth-step-1">
+      <div class="auth-title">Créer votre compte</div>
+      <div class="auth-sub">MobiPass n'émet aucune nouvelle carte : il relie votre carte de transport existante à tous les réseaux.</div>
 
-    <div class="auth-field-label">Prénom</div>
-    <input id="auth-firstname" class="auth-input" placeholder="Ex : Mouhamadou">
+      <div class="auth-field-label">Prénom</div>
+      <input id="auth-firstname" class="auth-input" placeholder="Ex : Mouhamadou">
 
-    <div class="auth-field-label">Nom</div>
-    <input id="auth-lastname" class="auth-input" placeholder="Ex : Diallo">
+      <div class="auth-field-label">Nom</div>
+      <input id="auth-lastname" class="auth-input" placeholder="Ex : Diallo">
 
-    <div class="auth-field-label">Email</div>
-    <input id="auth-email" class="auth-input" type="email" placeholder="Ex : mouhamadou@email.com">
+      <div class="auth-field-label">Email</div>
+      <input id="auth-email" class="auth-input" type="email" placeholder="Ex : mouhamadou@email.com">
 
-    <div class="auth-field-label">Numéro de téléphone</div>
-    <input class="auth-input" placeholder="Bientôt disponible" disabled>
-    <div class="auth-input-soon">La vérification par téléphone sera activée prochainement.</div>
+      <div class="auth-field-label">Numéro de téléphone</div>
+      <input class="auth-input" placeholder="Bientôt disponible" disabled>
+      <div class="auth-input-soon">La vérification par téléphone sera activée prochainement.</div>
 
-    <div id="auth-error" class="auth-error"></div>
+      <div id="auth-error-1" class="auth-error"></div>
 
-    <button class="btn btn-primary" style="width:100%; margin-top:6px;" onclick="submitSignup()">Créer mon compte</button>
-    <div class="auth-footer">En créant un compte, vous acceptez les conditions d'utilisation de MobiPass.</div>
+      <button class="btn btn-primary" style="width:100%; margin-top:6px;" onclick="goToAuthStep2()">Continuer</button>
+      <div class="auth-footer">En créant un compte, vous acceptez les conditions d'utilisation de MobiPass.</div>
+    </div>
+
+    <!-- Étape 2 : lier la carte existante -->
+    <div id="auth-step-2" style="display:none;">
+      <div class="auth-title">Reliez votre carte existante</div>
+      <div class="auth-sub">Choisissez la carte de transport que vous possédez déjà. Elle continuera de fonctionner normalement, et sera désormais aussi acceptée sur les autres réseaux.</div>
+
+      <div class="auth-field-label" style="margin-top:0;">Votre carte actuelle</div>
+      <div id="auth-card-ops" style="display:flex; gap:8px; flex-wrap:wrap; margin-bottom:6px;">
+        <div class="op-pill" data-authop="brt" onclick="selectAuthCardOp('brt')" style="background:#111A32; border-color:#263257; color:#B7C0DA;"><span class="op-dot" style="background:#2F6FED;"></span> BRT</div>
+        <div class="op-pill" data-authop="ter" onclick="selectAuthCardOp('ter')" style="background:#111A32; border-color:#263257; color:#B7C0DA;"><span class="op-dot" style="background:#F04438;"></span> TER</div>
+        <div class="op-pill" data-authop="ddd" onclick="selectAuthCardOp('ddd')" style="background:#111A32; border-color:#263257; color:#B7C0DA;"><span class="op-dot" style="background:#12B76A;"></span> DDD</div>
+        <div class="op-pill" data-authop="aftu" onclick="selectAuthCardOp('aftu')" style="background:#111A32; border-color:#263257; color:#B7C0DA;"><span class="op-dot" style="background:#F79009;"></span> AFTU</div>
+      </div>
+
+      <div class="auth-field-label">Numéro figurant sur la carte</div>
+      <input id="auth-card-number" class="auth-input" placeholder="Ex : 4587 2210 9931">
+
+      <div id="auth-error-2" class="auth-error"></div>
+
+      <button class="btn btn-primary" style="width:100%; margin-top:6px;" onclick="submitSignup()">Relier ma carte et terminer</button>
+      <div class="auth-footer" style="cursor:pointer; color:#B7C0DA;" onclick="goToAuthStep1()">← Retour</div>
+    </div>
   </div>
 </div>
 
@@ -1147,11 +1180,14 @@
   function closeDrawer(){ document.getElementById('drawer-overlay').classList.remove('open'); }
 
   /* ================= Inscription ================= */
-  function submitSignup(){
+  var pendingSignup = null;
+  var selectedAuthCardOp = null;
+
+  function goToAuthStep2(){
     var first = document.getElementById('auth-firstname').value.trim();
     var last = document.getElementById('auth-lastname').value.trim();
     var email = document.getElementById('auth-email').value.trim();
-    var errorEl = document.getElementById('auth-error');
+    var errorEl = document.getElementById('auth-error-1');
 
     if(!first || !last){
       errorEl.textContent = 'Merci de renseigner votre prénom et votre nom.';
@@ -1163,27 +1199,71 @@
       return;
     }
     errorEl.textContent = '';
+    pendingSignup = { firstName:first, lastName:last, email:email };
 
-    var fullName = first + ' ' + last;
-    var initials = (first[0] || '').toUpperCase() + (last[0] || '').toUpperCase();
-
-    localStorage.setItem('mobipass_user', JSON.stringify({ firstName:first, lastName:last, email:email }));
-
-    applyUserToUI(first, last, email);
-
-    document.getElementById('auth-overlay').classList.add('hidden');
-    showToast('Bienvenue sur MobiPass, ' + first + ' !');
+    document.getElementById('auth-step-1').style.display = 'none';
+    document.getElementById('auth-step-2').style.display = 'block';
   }
 
-  function applyUserToUI(first, last, email){
-    var fullName = first + ' ' + last;
-    var initials = (first[0] || '').toUpperCase() + (last[0] || '').toUpperCase();
-    document.getElementById('voyageur-title').textContent = 'Bonsoir, ' + first;
+  function goToAuthStep1(){
+    document.getElementById('auth-step-2').style.display = 'none';
+    document.getElementById('auth-step-1').style.display = 'block';
+  }
+
+  function selectAuthCardOp(op){
+    selectedAuthCardOp = op;
+    document.querySelectorAll('#auth-card-ops .op-pill').forEach(function(el){
+      el.classList.toggle('selected', el.getAttribute('data-authop') === op);
+    });
+  }
+
+  function submitSignup(){
+    var errorEl = document.getElementById('auth-error-2');
+    var cardNumber = document.getElementById('auth-card-number').value.trim();
+
+    if(!selectedAuthCardOp){
+      errorEl.textContent = 'Choisissez la carte que vous possédez déjà.';
+      return;
+    }
+    if(cardNumber.length < 4){
+      errorEl.textContent = 'Entrez le numéro figurant sur votre carte.';
+      return;
+    }
+    errorEl.textContent = '';
+
+    var last4 = cardNumber.replace(/\s+/g,'').slice(-4);
+    var userData = {
+      firstName: pendingSignup.firstName,
+      lastName: pendingSignup.lastName,
+      email: pendingSignup.email,
+      cardOperator: selectedAuthCardOp,
+      cardLast4: last4
+    };
+    localStorage.setItem('mobipass_user', JSON.stringify(userData));
+
+    applyUserToUI(userData);
+    document.getElementById('auth-overlay').classList.add('hidden');
+    showToast('Carte ' + opFullName(selectedAuthCardOp) + ' reliée — bienvenue sur MobiPass, ' + userData.firstName + ' !');
+  }
+
+  function applyUserToUI(u){
+    var fullName = u.firstName + ' ' + u.lastName;
+    var initials = (u.firstName[0] || '').toUpperCase() + (u.lastName[0] || '').toUpperCase();
+    document.getElementById('voyageur-title').textContent = 'Bonsoir, ' + u.firstName;
     document.getElementById('voyageur-avatar').textContent = initials;
     document.getElementById('mcard-name').textContent = fullName;
-    document.getElementById('profile-firstname').value = first;
-    document.getElementById('profile-lastname').value = last;
-    document.getElementById('profile-email').value = email;
+    document.getElementById('profile-firstname').value = u.firstName;
+    document.getElementById('profile-lastname').value = u.lastName;
+    document.getElementById('profile-email').value = u.email;
+
+    if(u.cardOperator){
+      var color = OP_COLOR[u.cardOperator];
+      document.getElementById('mcard-op-label').textContent = 'CARTE ' + OP_LABEL[u.cardOperator] + ' · RELIÉE À MOBIPASS';
+      document.getElementById('mcard-number').textContent = '**** **** ' + (u.cardLast4 || '····');
+      document.getElementById('mcard-status').textContent = 'Acceptée sur 4 réseaux';
+      var mcard = document.getElementById('mcard');
+      mcard.style.background = 'radial-gradient(120% 140% at 0% 0%, ' + color + ' 0%, #17337A 55%, #0B1220 100%)';
+    }
   }
 
   function checkExistingSession(){
@@ -1191,7 +1271,7 @@
     if(saved){
       try{
         var u = JSON.parse(saved);
-        applyUserToUI(u.firstName, u.lastName, u.email);
+        applyUserToUI(u);
         document.getElementById('auth-overlay').classList.add('hidden');
       }catch(e){}
     }
@@ -1199,9 +1279,14 @@
 
   function logout(){
     localStorage.removeItem('mobipass_user');
+    pendingSignup = null;
+    selectedAuthCardOp = null;
     document.getElementById('auth-firstname').value = '';
     document.getElementById('auth-lastname').value = '';
     document.getElementById('auth-email').value = '';
+    document.getElementById('auth-card-number').value = '';
+    document.querySelectorAll('#auth-card-ops .op-pill').forEach(function(el){ el.classList.remove('selected'); });
+    goToAuthStep1();
     document.getElementById('auth-overlay').classList.remove('hidden');
     showScreen('voyageur');
     closeDrawer();
