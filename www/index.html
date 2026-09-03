@@ -164,6 +164,7 @@
     animation:slideUp .18s ease;
   }
   @keyframes slideUp{ from{ transform:translateY(24px); opacity:0; } to{ transform:translateY(0); opacity:1; } }
+  @keyframes spin{ to{ transform:rotate(360deg); } }
   .modal-handle{ width:40px; height:4px; background:var(--border); border-radius:4px; margin:8px auto 16px; }
   .modal-title{ font-size:16px; font-weight:700; margin-bottom:4px; }
   .modal-sub{ font-size:12.5px; color:var(--muted); margin-bottom:18px; }
@@ -238,6 +239,14 @@
   .term-amount{ font-size:28px; font-weight:800; }
   .term-amount-note{ font-size:11.5px; opacity:.85; margin-top:4px; }
   .term-timing{ text-align:center; color:#7C8AAE; font-size:11.5px; margin-top:12px; }
+
+  .donut-wrap{ display:flex; align-items:center; gap:20px; flex-wrap:wrap; }
+  .donut{ width:140px; height:140px; border-radius:50%; flex-shrink:0; }
+  .donut-legend{ flex:1; min-width:160px; }
+  .donut-legend-row{ display:flex; align-items:center; justify-content:space-between; padding:6px 0; font-size:12px; }
+  .donut-legend-name{ display:flex; align-items:center; gap:8px; font-weight:600; }
+  .donut-legend-dot{ width:9px; height:9px; border-radius:50%; flex-shrink:0; }
+  .donut-legend-value{ text-align:right; color:var(--muted); }
 
   .term-step{ display:flex; gap:12px; padding:12px 0; border-bottom:1px solid var(--border); }
   .term-step:last-child{ border-bottom:0; }
@@ -333,6 +342,7 @@
       <button id="btn-voyageur" class="active" onclick="showScreen('voyageur')">Voyageur</button>
       <button id="btn-operateur" onclick="showScreen('operateur')">Opérateur</button>
       <button id="btn-terminal" onclick="showScreen('terminal')">Terminal</button>
+      <button id="btn-admin" onclick="showScreen('admin')">Admin</button>
     </div>
 
     <div id="nav-voyageur">
@@ -372,6 +382,22 @@
       <div class="navitem"><span class="dot">◇</span> Réseau : BRT — Station Petersen</div>
       <div class="navitem"><span class="dot">◇</span> Diagnostic matériel</div>
     </div>
+
+    <div id="nav-admin" style="display:none">
+      <div class="navgroup-label">GESTION</div>
+      <div class="navitem active"><span class="dot">◆</span> Tableau de bord</div>
+      <div class="navitem" onclick="showToast('Utilisateurs — bientôt disponible')"><span class="dot">◇</span> Utilisateurs</div>
+      <div class="navitem" onclick="showToast('Cartes — bientôt disponible')"><span class="dot">◇</span> Cartes</div>
+      <div class="navitem" onclick="showToast('Abonnements — bientôt disponible')"><span class="dot">◇</span> Abonnements</div>
+      <div class="navgroup-label">RÉSEAUX & OPÉRATEURS</div>
+      <div class="navitem" onclick="showScreen('operateur')"><span class="dot">◇</span> Opérateurs</div>
+      <div class="navitem" onclick="showToast('Intégrations API — bientôt disponible')"><span class="dot">◇</span> Intégrations API</div>
+      <div class="navgroup-label">RÈGLES & DROITS</div>
+      <div class="navitem" onclick="showToast('Modes tarifaires — bientôt disponible')"><span class="dot">◇</span> Modes tarifaires</div>
+      <div class="navitem" onclick="showToast('Règles d\'interopérabilité — bientôt disponible')"><span class="dot">◇</span> Règles d'interopérabilité</div>
+      <div class="navgroup-label">SYSTÈME</div>
+      <div class="navitem" onclick="showToast('Paramètres système — bientôt disponible')"><span class="dot">◇</span> Paramètres</div>
+    </div>
   </div>
 
   <!-- MOBILE DRAWER -->
@@ -405,6 +431,7 @@
       <button id="mbtn-voyageur" class="active" onclick="showScreen('voyageur')">Voyageur</button>
       <button id="mbtn-operateur" onclick="showScreen('operateur')">Opérateur</button>
       <button id="mbtn-terminal" onclick="showScreen('terminal')">Terminal</button>
+      <button id="mbtn-admin" onclick="showScreen('admin')">Admin</button>
     </div>
 
     <!-- ===================== VOYAGEUR ===================== -->
@@ -611,6 +638,58 @@
       </div>
     </div>
 
+    <!-- ===================== ADMIN ===================== -->
+    <div id="screen-admin" class="screen">
+      <div class="topbar">
+        <div>
+          <h1>Bienvenue, Administrateur</h1>
+          <p>Vue d'ensemble de la plateforme</p>
+        </div>
+        <div class="topbar-right">
+          <span class="badge ok">Système opérationnel</span>
+        </div>
+      </div>
+
+      <div class="content">
+        <div class="grid grid-3" style="grid-template-columns:repeat(4,1fr); margin-bottom:18px;" id="admin-kpis"></div>
+
+        <div class="grid grid-2" style="align-items:start; margin-bottom:18px;">
+          <div class="card">
+            <h3>Statut des opérateurs</h3>
+            <div id="admin-operators-status"></div>
+          </div>
+          <div class="card">
+            <h3>Répartition des recettes</h3>
+            <div id="admin-revenue-donut"></div>
+          </div>
+        </div>
+
+        <div class="card" style="margin-bottom:18px;">
+          <h3>Transactions en temps réel</h3>
+          <div id="admin-live-transactions"></div>
+        </div>
+
+        <div class="grid" style="grid-template-columns:repeat(auto-fit, minmax(150px,1fr)); gap:14px;">
+          <div class="card" style="cursor:pointer;" onclick="showToast('Gestion des abonnements — bientôt disponible')">
+            <div class="kpi-icon" style="background:var(--blue-soft); color:var(--blue);">🎫</div>
+            <div class="sub-name" style="margin-top:10px;">Gestion des abonnements</div>
+          </div>
+          <div class="card" style="cursor:pointer;" onclick="showToast('Règles d\'interopérabilité — bientôt disponible')">
+            <div class="kpi-icon" style="background:var(--purple-soft); color:var(--purple);">🔀</div>
+            <div class="sub-name" style="margin-top:10px;">Règles d'interopérabilité</div>
+          </div>
+          <div class="card" style="cursor:pointer;" onclick="showToast('Monitoring temps réel — bientôt disponible')">
+            <div class="kpi-icon" style="background:var(--green-soft); color:var(--green);">📡</div>
+            <div class="sub-name" style="margin-top:10px;">Monitoring temps réel</div>
+          </div>
+          <div class="card" style="cursor:pointer;" onclick="showToast('Rapports & analyses — bientôt disponible')">
+            <div class="kpi-icon" style="background:var(--orange-soft); color:var(--orange);">📊</div>
+            <div class="sub-name" style="margin-top:10px;">Rapports & analyses</div>
+          </div>
+        </div>
+      </div>
+    </div>
+
     <!-- ===================== NOTIFICATIONS ===================== -->
     <div id="screen-notifications" class="screen">
       <div class="topbar">
@@ -673,12 +752,13 @@
             </div>
             <div class="settle-row">
               <div>
-                <div class="sub-name">Sécurité de la carte</div>
-                <div class="sub-meta">Verrouillage biométrique</div>
+                <div class="sub-name">Verrouillage par code PIN</div>
+                <div id="pin-status-meta" class="sub-meta">Désactivé</div>
               </div>
-              <span class="badge ok">Activé</span>
+              <span id="pin-status-badge" class="badge no">Désactivé</span>
             </div>
-            <button class="btn" style="width:100%; margin-top:16px; background:var(--red-soft); color:var(--red);" onclick="logout()">Se déconnecter</button>
+            <button id="pin-action-btn" class="btn btn-ghost" style="width:100%; margin-top:4px; margin-bottom:12px;" onclick="openModal('setpin')">Définir un code PIN</button>
+            <button class="btn" style="width:100%; margin-top:4px; background:var(--red-soft); color:var(--red);" onclick="logout()">Se déconnecter</button>
           </div>
         </div>
       </div>
@@ -803,9 +883,27 @@
   </div>
 </div>
 
+<!-- ===================== VERROUILLAGE PIN ===================== -->
+<div id="lock-overlay" class="auth-overlay hidden">
+  <div class="auth-card" style="text-align:center;">
+    <div class="auth-logo">
+      <div class="brand-mark">M</div>
+      <div class="name">MobiPass</div>
+    </div>
+    <div class="auth-title">Entrez votre code PIN</div>
+    <div class="auth-sub" id="lock-sub">Déverrouillez votre compte pour continuer</div>
+
+    <div id="pin-dots" style="display:flex; justify-content:center; gap:14px; margin:22px 0;"></div>
+
+    <div id="pin-keypad" style="display:grid; grid-template-columns:repeat(3,1fr); gap:10px; max-width:260px; margin:0 auto;"></div>
+
+    <div class="auth-footer" style="cursor:pointer; color:#B7C0DA; margin-top:20px;" onclick="unlockWithBiometric()">🔒 Déverrouiller avec l'empreinte (simulation)</div>
+  </div>
+</div>
+
 <script>
-  var ALL_SCREENS = ['voyageur','operateur','terminal','notifications','parametres','lignes','itineraire'];
-  var TAB_SCREENS = ['voyageur','operateur','terminal'];
+  var ALL_SCREENS = ['voyageur','operateur','terminal','notifications','parametres','lignes','itineraire','admin'];
+  var TAB_SCREENS = ['voyageur','operateur','terminal','admin'];
 
   function showScreen(name){
     ALL_SCREENS.forEach(function(s){
@@ -1011,6 +1109,76 @@
   }
 
   selectOperator('brt');
+
+  /* ================= Tableau de bord Admin/CETUD ================= */
+
+  function renderAdmin(){
+    // KPIs globaux (référence mensuelle, cohérents avec la maquette d'origine)
+    var kpisHtml = [
+      { icon:'👥', bg:'var(--blue-soft)', color:'var(--blue)', label:'Utilisateurs actifs', value:'128 540', delta:'+ 12,5% vs mois dernier' },
+      { icon:'💳', bg:'var(--green-soft)', color:'var(--green)', label:'Transactions aujourd\'hui', value:'245 830', delta:'+ 8,7% vs hier' },
+      { icon:'💰', bg:'var(--purple-soft)', color:'var(--purple)', label:'Recettes totales (mois)', value:'1 245 980 000 FCFA', delta:'+ 15,3% vs mois dernier' },
+      { icon:'📶', bg:'var(--orange-soft)', color:'var(--orange)', label:'Terminaux connectés', value:'1 256', delta:'98,6% de disponibilité' }
+    ].map(function(k){
+      return '<div class="kpi"><div class="kpi-top"><div class="kpi-icon" style="background:'+k.bg+'; color:'+k.color+';">'+k.icon+'</div>' +
+        '<div class="kpi-label">'+k.label+'</div></div>' +
+        '<div class="kpi-value" style="font-size:19px;">'+k.value+'</div>' +
+        '<div class="kpi-delta up">'+k.delta+'</div></div>';
+    }).join('');
+    document.getElementById('admin-kpis').innerHTML = kpisHtml;
+
+    // Statut des opérateurs — données live issues de l'écran Opérateur
+    var statusHtml = '';
+    ['brt','ter','ddd','aftu'].forEach(function(op){
+      var d = operatorData[op];
+      statusHtml += '<div class="sub-row">' +
+        '<div style="display:flex; align-items:center; gap:12px;">' +
+          '<div class="op-mark" style="background:'+COLORS[op]+';">'+op.toUpperCase()+'</div>' +
+          '<div><div class="sub-name">'+NAMES[op]+'</div><div class="sub-meta">'+d.kpi1+' validations aujourd\'hui</div></div>' +
+        '</div>' +
+        '<span class="badge ok">En ligne</span>' +
+      '</div>';
+    });
+    document.getElementById('admin-operators-status').innerHTML = statusHtml;
+
+    // Répartition des recettes — donut CSS (conic-gradient), chiffres de référence mensuels
+    var revenue = [
+      { op:'brt', label:'BRT Dakar', pct:45, amount:'561 000 000 FCFA' },
+      { op:'ter', label:'TER Sénégal', pct:30, amount:'373 794 000 FCFA' },
+      { op:'ddd', label:'Dakar Dem Dikk', pct:15, amount:'186 897 000 FCFA' },
+      { op:'aftu', label:'AFTU', pct:10, amount:'124 598 000 FCFA' }
+    ];
+    var gradientStops = [], acc = 0;
+    revenue.forEach(function(r){
+      gradientStops.push(COLORS[r.op] + ' ' + acc + '% ' + (acc + r.pct) + '%');
+      acc += r.pct;
+    });
+    var legendHtml = revenue.map(function(r){
+      return '<div class="donut-legend-row"><div class="donut-legend-name"><span class="donut-legend-dot" style="background:'+COLORS[r.op]+';"></span>'+r.label+' — '+r.pct+'%</div><div class="donut-legend-value">'+r.amount+'</div></div>';
+    }).join('');
+    document.getElementById('admin-revenue-donut').innerHTML =
+      '<div class="donut-wrap">' +
+        '<div class="donut" style="background:conic-gradient('+gradientStops.join(', ')+');"></div>' +
+        '<div class="donut-legend">'+legendHtml+'</div>' +
+      '</div>';
+
+    // Transactions en temps réel — agrégées depuis les 4 opérateurs
+    var allValidations = [];
+    ['brt','ter','ddd','aftu'].forEach(function(op){
+      operatorData[op].validations.forEach(function(v){
+        allValidations.push({ terminalOp:op, cardOp:v.op, route:v.route, time:v.time, amount:v.amount, free:v.free });
+      });
+    });
+    var liveHtml = allValidations.slice(0,6).map(function(v){
+      return '<div class="trip-row">' +
+        '<div class="trip-icon" style="background:'+COLORS[v.cardOp]+';">'+v.cardOp.toUpperCase()+'</div>' +
+        '<div class="trip-main"><div class="trip-route">'+v.route+'</div><div class="trip-time">Terminal '+NAMES[v.terminalOp]+' · '+v.time+'</div></div>' +
+        '<div class="trip-amount">'+(v.free ? '<span class="free">'+v.amount+'</span>' : v.amount)+'</div>' +
+      '</div>';
+    }).join('');
+    document.getElementById('admin-live-transactions').innerHTML = liveHtml;
+  }
+  renderAdmin();
   runScenario('included');
 
   /* ================= VOYAGEUR — actions fonctionnelles ================= */
@@ -1145,6 +1313,8 @@
         '<button class="btn btn-primary" style="width:100%; margin-top:18px;" onclick="confirmRecharge()">Confirmer la recharge</button>';
     } else if(type === 'subscribe'){
       renderSubscribeTypeChoice();
+    } else if(type === 'setpin'){
+      renderSetPinModal();
     }
 
     document.getElementById('modal-overlay').classList.add('open');
@@ -1165,11 +1335,78 @@
   }
   function confirmRecharge(){
     if(!rechargeSelected || rechargeSelected <= 0){ showToast('Entrez un montant valide'); return; }
-    wallet.balance += rechargeSelected;
+    renderPaymentMethodStep();
+  }
+
+  /* --- Étape 2 : choix du moyen de paiement mobile --- */
+  var PAYMENT_METHODS = {
+    orange: { name:'Orange Money', color:'#FF6600', icon:'🟠' },
+    wave: { name:'Wave', color:'#1DC8E8', icon:'🌊' },
+    card: { name:'Carte bancaire', color:'#2F6FED', icon:'💳' }
+  };
+  var selectedPaymentMethod = null;
+
+  function renderPaymentMethodStep(){
+    var body = document.getElementById('modal-body');
+    var methodsHtml = Object.keys(PAYMENT_METHODS).map(function(key){
+      var m = PAYMENT_METHODS[key];
+      return '<div class="plan-option" data-pm="'+key+'" onclick="selectPaymentMethod(\''+key+'\')">' +
+        '<div class="plan-row-top"><div class="plan-name">'+m.icon+' '+m.name+'</div></div>' +
+      '</div>';
+    }).join('');
+    body.innerHTML =
+      '<div class="modal-title">Choisir un moyen de paiement</div>' +
+      '<div class="modal-sub">Montant à recharger : '+fmtFCFA(rechargeSelected)+'</div>' +
+      methodsHtml +
+      '<div id="pm-phone-wrap" style="display:none;">' +
+        '<div class="field-label">Numéro '+'</div>' +
+        '<input id="pm-phone" class="field-input" placeholder="Ex : 77 123 45 67">' +
+      '</div>' +
+      '<button class="btn btn-primary" style="width:100%; margin-top:16px;" id="pm-confirm-btn" disabled onclick="processPayment()">Choisissez un moyen de paiement</button>' +
+      '<div class="auth-footer" style="cursor:pointer;" onclick="openModal(\'recharge\')">← Retour au montant</div>';
+  }
+
+  function selectPaymentMethod(key){
+    selectedPaymentMethod = key;
+    document.querySelectorAll('[data-pm]').forEach(function(el){
+      el.classList.toggle('selected', el.getAttribute('data-pm') === key);
+    });
+    var wrap = document.getElementById('pm-phone-wrap');
+    var btn = document.getElementById('pm-confirm-btn');
+    var m = PAYMENT_METHODS[key];
+    if(key === 'card'){
+      wrap.style.display = 'none';
+    } else {
+      wrap.style.display = 'block';
+      document.getElementById('pm-phone').placeholder = 'Numéro ' + m.name;
+    }
+    btn.disabled = false;
+    btn.textContent = 'Payer ' + fmtFCFA(rechargeSelected) + ' avec ' + m.name;
+  }
+
+  function processPayment(){
+    if(!selectedPaymentMethod) return;
+    var m = PAYMENT_METHODS[selectedPaymentMethod];
+    if(selectedPaymentMethod !== 'card'){
+      var phone = document.getElementById('pm-phone').value.trim();
+      if(phone.length < 6){ showToast('Entrez votre numéro ' + m.name); return; }
+    }
+
+    var body = document.getElementById('modal-body');
+    body.innerHTML =
+      '<div class="modal-title">Paiement en cours…</div>' +
+      '<div class="modal-sub">Confirmez la transaction sur votre application '+m.name+' si demandé.</div>' +
+      '<div style="display:flex; justify-content:center; padding:30px 0;"><div style="width:36px; height:36px; border:3px solid var(--border); border-top-color:'+m.color+'; border-radius:50%; animation:spin .8s linear infinite;"></div></div>';
+
     var amt = rechargeSelected;
-    renderWallet();
-    closeModal();
-    showToast('Solde rechargé de ' + fmtFCFA(amt));
+    var methodName = m.name;
+    setTimeout(function(){
+      wallet.balance += amt;
+      renderWallet();
+      closeModal();
+      showToast('Recharge de ' + fmtFCFA(amt) + ' via ' + methodName + ' réussie');
+      selectedPaymentMethod = null;
+    }, 1400);
   }
 
   /* ================= Abonnements — 3 types ================= */
@@ -1502,8 +1739,13 @@
         var u = JSON.parse(saved);
         applyUserToUI(u);
         document.getElementById('auth-overlay').classList.add('hidden');
+        if(localStorage.getItem('mobipass_pin')){
+          document.getElementById('lock-overlay').classList.remove('hidden');
+          initPinKeypad();
+        }
       }catch(e){}
     }
+    refreshPinStatusUI();
   }
 
   function logout(){
@@ -1517,8 +1759,145 @@
     document.querySelectorAll('#auth-card-ops .op-pill').forEach(function(el){ el.classList.remove('selected'); });
     goToAuthStep1();
     document.getElementById('auth-overlay').classList.remove('hidden');
+    document.getElementById('lock-overlay').classList.add('hidden');
     showScreen('voyageur');
     closeDrawer();
+  }
+
+  /* ================= Verrouillage PIN / biométrique ================= */
+
+  function refreshPinStatusUI(){
+    var pin = localStorage.getItem('mobipass_pin');
+    var badge = document.getElementById('pin-status-badge');
+    var meta = document.getElementById('pin-status-meta');
+    var btn = document.getElementById('pin-action-btn');
+    if(!badge) return;
+    if(pin){
+      badge.className = 'badge ok'; badge.textContent = 'Activé';
+      meta.textContent = 'Un code PIN protège l\'ouverture de l\'application';
+      btn.textContent = 'Modifier le code PIN';
+      var disableBtn = document.getElementById('pin-disable-btn');
+      if(!disableBtn){
+        btn.insertAdjacentHTML('afterend', '<button id="pin-disable-btn" class="btn" style="width:100%; margin-top:4px; margin-bottom:12px; background:var(--red-soft); color:var(--red);" onclick="disablePin()">Désactiver le verrouillage</button>');
+      }
+    } else {
+      badge.className = 'badge no'; badge.textContent = 'Désactivé';
+      meta.textContent = 'Désactivé';
+      btn.textContent = 'Définir un code PIN';
+      var existingDisableBtn = document.getElementById('pin-disable-btn');
+      if(existingDisableBtn) existingDisableBtn.remove();
+    }
+  }
+
+  function disablePin(){
+    localStorage.removeItem('mobipass_pin');
+    refreshPinStatusUI();
+    showToast('Verrouillage par code PIN désactivé');
+  }
+
+  // --- Définition du PIN (dans une modale, 2 étapes : saisie puis confirmation) ---
+  var pinSetupStage = 'enter';
+  var pinSetupFirst = '';
+
+  function renderSetPinModal(){
+    pinSetupStage = 'enter';
+    pinSetupFirst = '';
+    var body = document.getElementById('modal-body');
+    body.innerHTML =
+      '<div class="modal-title">Définir un code PIN</div>' +
+      '<div class="modal-sub" id="setpin-sub">Choisissez un code à 4 chiffres</div>' +
+      '<div id="setpin-dots" style="display:flex; justify-content:center; gap:14px; margin:18px 0;"></div>' +
+      '<div id="setpin-keypad" style="display:grid; grid-template-columns:repeat(3,1fr); gap:10px; max-width:260px; margin:0 auto;"></div>';
+    buildKeypad('setpin-keypad', onSetPinDigit);
+    renderPinDots('setpin-dots', 0);
+  }
+
+  function onSetPinDigit(digit){
+    var current = (digit === 'back')
+      ? (window.__setpinBuffer || '').slice(0, -1)
+      : ((window.__setpinBuffer || '') + digit).slice(0, 4);
+    window.__setpinBuffer = current;
+    renderPinDots('setpin-dots', current.length);
+
+    if(current.length === 4){
+      if(pinSetupStage === 'enter'){
+        pinSetupFirst = current;
+        pinSetupStage = 'confirm';
+        window.__setpinBuffer = '';
+        document.getElementById('setpin-sub').textContent = 'Confirmez votre code PIN';
+        setTimeout(function(){ renderPinDots('setpin-dots', 0); }, 150);
+      } else {
+        if(current === pinSetupFirst){
+          localStorage.setItem('mobipass_pin', current);
+          refreshPinStatusUI();
+          closeModal();
+          showToast('Code PIN activé');
+        } else {
+          document.getElementById('setpin-sub').textContent = 'Les codes ne correspondent pas — recommencez';
+          document.getElementById('setpin-sub').style.color = 'var(--red)';
+          pinSetupStage = 'enter';
+          pinSetupFirst = '';
+          window.__setpinBuffer = '';
+          setTimeout(function(){ renderPinDots('setpin-dots', 0); }, 400);
+        }
+      }
+    }
+  }
+
+  // --- Écran de verrouillage au lancement ---
+  function initPinKeypad(){
+    window.__lockBuffer = '';
+    document.getElementById('lock-sub').textContent = 'Déverrouillez votre compte pour continuer';
+    document.getElementById('lock-sub').style.color = '';
+    buildKeypad('pin-keypad', onLockDigit);
+    renderPinDots('pin-dots', 0);
+  }
+
+  function onLockDigit(digit){
+    var current = (digit === 'back')
+      ? (window.__lockBuffer || '').slice(0, -1)
+      : ((window.__lockBuffer || '') + digit).slice(0, 4);
+    window.__lockBuffer = current;
+    renderPinDots('pin-dots', current.length);
+
+    if(current.length === 4){
+      var stored = localStorage.getItem('mobipass_pin');
+      if(current === stored){
+        document.getElementById('lock-overlay').classList.add('hidden');
+        showToast('Compte déverrouillé');
+      } else {
+        document.getElementById('lock-sub').textContent = 'Code incorrect — réessayez';
+        document.getElementById('lock-sub').style.color = 'var(--red)';
+        window.__lockBuffer = '';
+        setTimeout(function(){ renderPinDots('pin-dots', 0); }, 400);
+      }
+    }
+  }
+
+  function unlockWithBiometric(){
+    showToast('Authentification biométrique simulée…');
+    setTimeout(function(){
+      document.getElementById('lock-overlay').classList.add('hidden');
+      showToast('Compte déverrouillé');
+    }, 700);
+  }
+
+  // --- Utilitaires clavier numérique partagés ---
+  function buildKeypad(containerId, onDigit){
+    var keys = ['1','2','3','4','5','6','7','8','9','','0','back'];
+    var html = keys.map(function(k){
+      if(k === '') return '<div></div>';
+      if(k === 'back') return '<button class="btn btn-ghost" style="font-size:16px;" onclick="('+onDigit.name+')(\'back\')">⌫</button>';
+      return '<button class="btn btn-ghost" style="font-size:17px; font-weight:700;" onclick="('+onDigit.name+')(\''+k+'\')">'+k+'</button>';
+    }).join('');
+    document.getElementById(containerId).innerHTML = html;
+  }
+  function renderPinDots(containerId, filled){
+    var html = '';
+    for(var i=0;i<4;i++){
+      html += '<div style="width:14px; height:14px; border-radius:50%; border:2px solid var(--blue); background:'+(i<filled?'var(--blue)':'transparent')+';"></div>';
+    }
+    document.getElementById(containerId).innerHTML = html;
   }
 
   checkExistingSession();
